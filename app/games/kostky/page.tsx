@@ -36,6 +36,7 @@ export default function KostkyPage() {
   const [firstRoll, setFirstRoll] = useState(true)
   const [specialOfferDice, setSpecialOfferDice] = useState<DiceValue[]>([])
   const [showSpecialOffer, setShowSpecialOffer] = useState(false)
+  const [possiblePoints, setPossiblePoints] = useState<(number | null)[]>([null, null, null, null, null, null])
   
   const supabase = createClient()
 
@@ -48,6 +49,7 @@ export default function KostkyPage() {
     
     setRolling(true)
     setMessage("Házení...")
+    setPossiblePoints([null, null, null, null, null, null])
     
     setTimeout(() => {
       const availableDice = dice.length - selected.filter(s => s).length
@@ -85,9 +87,48 @@ export default function KostkyPage() {
         return
       }
       
-      setMessage("Vyber kostky k odložení")
+      // Calculate possible points for each die
+      calculatePossiblePoints(newDice, selected)
+      
+      setMessage("Klikni na kostky k odložení nebo ukonči tah")
       setFirstRoll(false)
-    }, 500)
+      setCanEndTurn(true)
+    }, 800)
+  }
+
+  const calculatePossiblePoints = (diceArray: DiceValue[], currentSelected: boolean[]) => {
+    const unselectedDice = diceArray.filter((_, i) => !currentSelected[i])
+    const counts = countDice(unselectedDice)
+    const points: (number | null)[] = Array(diceArray.length).fill(null)
+    
+    diceArray.forEach((die, i) => {
+      if (currentSelected[i]) return
+      
+      const dieCount = counts[die]
+      
+      if (die === 1) {
+        if (dieCount >= 6) points[i] = 4000
+        else if (dieCount >= 5) points[i] = 3000
+        else if (dieCount >= 4) points[i] = 2000
+        else if (dieCount >= 3) points[i] = 1000
+        else points[i] = 100
+      } else if (die === 5) {
+        if (dieCount >= 6) points[i] = 2000
+        else if (dieCount >= 5) points[i] = 1500
+        else if (dieCount >= 4) points[i] = 1000
+        else if (dieCount >= 3) points[i] = 500
+        else points[i] = 50
+      } else {
+        // 2, 3, 4, 6 only score from 3+
+        if (dieCount >= 6) points[i] = die * 400
+        else if (dieCount >= 5) points[i] = die * 300
+        else if (dieCount >= 4) points[i] = die * 200
+        else if (dieCount >= 3) points[i] = die * 100
+        else points[i] = null
+      }
+    })
+    
+    setPossiblePoints(points)
   }
 
   const checkSpecialCombinations = (diceRoll: DiceValue[]) => {
@@ -149,7 +190,9 @@ export default function KostkyPage() {
 
   const declineSpecialOffer = () => {
     setShowSpecialOffer(false)
-    setMessage("Vyber kostky k odložení")
+    calculatePossiblePoints(dice, selected)
+    setMessage("Klikni na kostky k odložení nebo ukonči tah")
+    setCanEndTurn(true)
   }
 
   const countDice = (diceArray: DiceValue[]) => {
@@ -243,31 +286,36 @@ export default function KostkyPage() {
     }
     
     setSelected(newSelected)
+    
+    // After selecting, bank them and continue or end turn
+    bankDice(newSelected)
   }
 
-  const bankSelected = () => {
-    const selectedDice = dice.filter((_, i) => selected[i])
-    if (selectedDice.length === 0) return
+  const bankDice = (selectedDice: boolean[]) => {
+    const selectedValues = dice.filter((_, i) => selectedDice[i])
+    if (selectedValues.length === 0) return
     
-    const counts = countDice(selectedDice)
-    const score = calculateDiceScore(selectedDice, counts)
+    const counts = countDice(selectedValues)
+    const score = calculateDiceScore(selectedValues, counts)
     
-    setBanking(prev => [...prev, ...selectedDice])
+    setBanking(prev => [...prev, ...selectedValues])
     setBankingScore(prev => prev + score)
     
     // Remove selected dice
-    const remainingDice = dice.filter((_, i) => !selected[i])
+    const remainingDice = dice.filter((_, i) => !selectedDice[i])
     
     // If all dice selected, go "do plných"
     if (remainingDice.length === 0) {
-      setMessage("Do plných! Hoď všemi kostkami")
+      setMessage("Do plných! Hoď všemi kostkami nebo ukonči tah")
       setDice([1, 2, 3, 4, 5, 6])
       setSelected([false, false, false, false, false, false])
-      setCanEndTurn(false)
+      setPossiblePoints([null, null, null, null, null, null])
+      setCanEndTurn(true)
       setFirstRoll(true)
     } else {
       setDice(remainingDice as DiceValue[])
       setSelected(Array(remainingDice.length).fill(false))
+      setPossiblePoints(Array(remainingDice.length).fill(null))
       setMessage("Hoď zbývajícími kostkami nebo ukonči tah")
       setCanEndTurn(true)
     }
@@ -323,6 +371,7 @@ export default function KostkyPage() {
     setCanEndTurn(false)
     setFirstRoll(true)
     setShowSpecialOffer(false)
+    setPossiblePoints([null, null, null, null, null, null])
   }
 
   const saveScore = async (score: number) => {
@@ -427,24 +476,36 @@ export default function KostkyPage() {
               {dice.map((value, index) => {
                 const selectable = getSelectableDice(dice, selected)
                 const isSelectable = selectable[index] && rollCount > 0
+                const points = possiblePoints[index]
                 
                 return (
-                  <button
-                    key={index}
-                    onClick={() => toggleSelectDie(index)}
-                    disabled={!isSelectable || rolling}
-                    className={`relative w-16 h-16 md:w-20 md:h-20 rounded-xl text-3xl md:text-4xl font-bold transition-all border-2 ${
-                      rolling
-                        ? "animate-bounce bg-primary/20 text-primary border-primary/30"
-                        : selected[index]
-                        ? "bg-chart-4/20 text-chart-4 border-chart-4"
-                        : isSelectable
-                        ? "bg-primary/10 text-foreground border-primary/50 hover:bg-primary/20 cursor-pointer"
-                        : "bg-secondary/50 text-muted-foreground border-border/30 cursor-not-allowed"
-                    }`}
-                  >
-                    {value}
-                  </button>
+                  <div key={index} className="relative">
+                    <button
+                      onClick={() => toggleSelectDie(index)}
+                      disabled={!isSelectable || rolling}
+                      className={`relative w-16 h-16 md:w-20 md:h-20 rounded-xl text-3xl md:text-4xl font-bold transition-all border-2 ${
+                        rolling
+                          ? "animate-spin bg-primary/20 text-primary border-primary/30"
+                          : selected[index]
+                          ? "bg-chart-4/20 text-chart-4 border-chart-4"
+                          : isSelectable
+                          ? "bg-primary/10 text-foreground border-primary/50 hover:bg-primary/20 cursor-pointer hover:scale-105"
+                          : "bg-secondary/50 text-muted-foreground border-border/30 cursor-not-allowed"
+                      }`}
+                      style={{
+                        animation: rolling && !selected[index] ? 'spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55)' : 'none'
+                      }}
+                    >
+                      {value}
+                    </button>
+                    {points !== null && !selected[index] && (
+                      <Badge 
+                        className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs px-1.5 py-0.5"
+                      >
+                        +{points}
+                      </Badge>
+                    )}
+                  </div>
                 )
               })}
             </div>
@@ -452,22 +513,12 @@ export default function KostkyPage() {
             <div className="flex justify-center gap-4 flex-wrap">
               <Button
                 onClick={rollDice}
-                disabled={rolling || showSpecialOffer || (rollCount > 0 && selected.every(s => !s))}
+                disabled={rolling || showSpecialOffer}
                 className="bg-primary hover:bg-primary/90 neon-glow gap-2"
               >
                 <Dices className="h-5 w-5" />
                 Hodit
               </Button>
-              
-              {rollCount > 0 && selected.some(s => s) && (
-                <Button
-                  onClick={bankSelected}
-                  disabled={rolling}
-                  className="bg-chart-4 hover:bg-chart-4/90 gap-2"
-                >
-                  Odložit
-                </Button>
-              )}
               
               {canEndTurn && (
                 <Button
@@ -506,6 +557,16 @@ export default function KostkyPage() {
           </CardContent>
         </Card>
       </main>
+
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg) translateX(0) translateY(0); }
+          25% { transform: rotate(180deg) translateX(10px) translateY(-10px); }
+          50% { transform: rotate(360deg) translateX(-10px) translateY(10px); }
+          75% { transform: rotate(540deg) translateX(10px) translateY(-5px); }
+          100% { transform: rotate(720deg) translateX(0) translateY(0); }
+        }
+      `}</style>
     </div>
   )
 }
