@@ -12,63 +12,73 @@ import type { User } from "@supabase/supabase-js"
 
 const QUESTIONS = [
   {
-    question: "Co si dáš k snídani na koleji?",
+    question: "Co si dá smažka na snídani?",
     answers: [
-      { text: "Rohlík", points: 35 },
-      { text: "Cereálie", points: 25 },
-      { text: "Nic", points: 20 },
-      { text: "Vajíčka", points: 12 },
-      { text: "Toast", points: 8 },
+      { text: "Rohlík s fetou", points: 40 },
+      { text: "Cereálie s pivem", points: 25 },
+      { text: "Perník", points: 18 },
+      { text: "Zbytky z včera", points: 12 },
+      { text: "Nic, spí", points: 5 },
     ],
   },
   {
-    question: "Co děláš když máš nudu na přednášce?",
+    question: "Kde se smažky nejčastěji schází?",
     answers: [
-      { text: "Koukám na mobil", points: 40 },
-      { text: "Spím", points: 25 },
-      { text: "Kreslím si", points: 15 },
-      { text: "Chatuju", points: 12 },
-      { text: "Jdu pryč", points: 8 },
+      { text: "Kolej", points: 38 },
+      { text: "Pivnice", points: 28 },
+      { text: "U vařiče pika", points: 18 },
+      { text: "Pernikárna", points: 10 },
+      { text: "Knihovna (fakt?)", points: 6 },
     ],
   },
   {
-    question: "Jaké jídlo si objednáš když jsi líný vařit?",
+    question: "Co dělá feťák v Ostravě?",
     answers: [
-      { text: "Pizza", points: 38 },
-      { text: "Burger", points: 22 },
-      { text: "Kebab", points: 18 },
-      { text: "Sushi", points: 14 },
-      { text: "Čína", points: 8 },
+      { text: "Vaří piko", points: 35 },
+      { text: "Prodává perník", points: 25 },
+      { text: "Krade kola", points: 22 },
+      { text: "Běhá po Stodolní", points: 12 },
+      { text: "Studuje", points: 6 },
     ],
   },
   {
-    question: "Co je nejhorší na kolejích?",
+    question: "Jakou příchuť má nejlepší perník?",
     answers: [
-      { text: "Spolubydlící", points: 30 },
-      { text: "Hluk", points: 25 },
-      { text: "Sprchy", points: 20 },
-      { text: "Jídlo v menze", points: 15 },
-      { text: "WiFi", points: 10 },
+      { text: "Medový", points: 32 },
+      { text: "Skořicový", points: 26 },
+      { text: "Čokoládový", points: 20 },
+      { text: "Piko s medem", points: 14 },
+      { text: "Pivní", points: 8 },
     ],
   },
   {
-    question: "Co děláš v noci před zkouškou?",
+    question: "Co si smažka dá k večeři?",
     answers: [
-      { text: "Učím se", points: 35 },
-      { text: "Panikařím", points: 25 },
-      { text: "Spím", points: 18 },
-      { text: "Netflix", points: 14 },
-      { text: "Piju kafe", points: 8 },
+      { text: "Pizza", points: 36 },
+      { text: "Smažák", points: 28 },
+      { text: "Perník", points: 18 },
+      { text: "Piko", points: 12 },
+      { text: "Instantní nudle", points: 6 },
     ],
   },
   {
-    question: "Jaký je tvůj oblíbený energeťák?",
+    question: "Kde vařič pika ukrývá svou várku?",
     answers: [
-      { text: "Monster", points: 32 },
-      { text: "Red Bull", points: 28 },
-      { text: "Kofola", points: 18 },
-      { text: "Semtex", points: 14 },
-      { text: "Žádný", points: 8 },
+      { text: "Pod postelí", points: 34 },
+      { text: "V lednici", points: 26 },
+      { text: "Na balkoně", points: 20 },
+      { text: "V perníkárně", points: 12 },
+      { text: "U souseda", points: 8 },
+    ],
+  },
+  {
+    question: "Co je nejhorší na ostravských kolejích?",
+    answers: [
+      { text: "Feťáci", points: 36 },
+      { text: "Hluk z pika", points: 28 },
+      { text: "Zápach perníku", points: 18 },
+      { text: "Smažky co křičí", points: 12 },
+      { text: "Ceny v menze", points: 6 },
     ],
   },
 ]
@@ -191,7 +201,7 @@ export default function CoNaToSmazkyPage() {
               </h1>
               <p className="text-muted-foreground mt-2 flex items-center justify-center gap-2">
                 <Users className="h-4 w-4" />
-                100 spolubydlících odpovědělo
+                100 ostravských smažek odpovědělo
               </p>
             </div>
 

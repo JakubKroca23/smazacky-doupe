@@ -1,8 +1,7 @@
 import { Header } from "@/components/header"
 import { GameCard } from "@/components/game-card"
-import { EventsBanner } from "@/components/events-banner"
 import { OnlinePlayers } from "@/components/online-players"
-import { Gamepad2, Trophy, Sparkles } from "lucide-react"
+import { Gamepad2, Trophy } from "lucide-react"
 
 const games = [
   {
@@ -58,8 +57,6 @@ export default function HomePage() {
             
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4 text-balance">
               <span className="text-foreground">Vítej smažko !  </span>
-              
-              
             </h1>
             
             <p className="text-lg text-muted-foreground mb-8 max-w-xl text-pretty">
@@ -77,25 +74,9 @@ export default function HomePage() {
                 <Trophy className="h-4 w-4 text-chart-4" />
                 <span>Žebříčky</span>
               </div>
-              <div className="w-px h-4 bg-border" />
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-accent" />
-                <span>Živé Akce</span>
-              </div>
             </div>
           </div>
         </div>
-      </section>
-
-      {/* Live Events */}
-      <section className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-accent" />
-            Živé Akce
-          </h2>
-        </div>
-        <EventsBanner />
       </section>
 
       {/* Games Grid */}

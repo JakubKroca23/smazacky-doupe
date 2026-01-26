@@ -46,7 +46,6 @@ export function Header() {
   const navItems = [
     { href: "/", label: "Hry", icon: Gamepad2 },
     { href: "/leaderboard", label: "Žebříček", icon: Trophy },
-    { href: "/events", label: "Akce", icon: Calendar },
   ]
 
   return (

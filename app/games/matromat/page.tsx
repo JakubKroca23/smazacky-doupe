@@ -20,19 +20,32 @@ const SYMBOL_VALUES: Record<string, number> = {
   "🍜": 2,
 }
 
+type ReelRow = string[]
+
 const PAYOUTS = [
-  { match: 3, multiplier: 5, name: "Trojice" },
-  { match: 4, multiplier: 15, name: "Čtveřice" },
+  { match: 3, multiplier: 3, name: "Trojice" },
+  { match: 4, multiplier: 10, name: "Čtveřice" },
   { match: 5, multiplier: 50, name: "JACKPOT!" },
+]
+
+const LINE_PAYOUTS = [
+  { lines: 1, multiplier: 1 },
+  { lines: 2, multiplier: 3 },
+  { lines: 3, multiplier: 5 },
 ]
 
 export default function MatromatPage() {
   const [user, setUser] = useState<User | null>(null)
   const [coins, setCoins] = useState(1000)
   const [bet, setBet] = useState(10)
-  const [reels, setReels] = useState<string[]>(["🍕", "🍕", "🍕", "🍕", "🍕"])
+  const [reels, setReels] = useState<ReelRow[]>([
+    ["🍕", "🍺", "📚", "💤", "☕"],
+    ["🍕", "🍺", "📚", "💤", "☕"],
+    ["🍕", "🍺", "📚", "💤", "☕"],
+  ])
   const [spinning, setSpinning] = useState(false)
   const [lastWin, setLastWin] = useState(0)
+  const [winningLines, setWinningLines] = useState<number[]>([])
   const [jackpot, setJackpot] = useState(false)
   const [totalWinnings, setTotalWinnings] = useState(0)
   const [highScore, setHighScore] = useState(0)
@@ -63,19 +76,28 @@ export default function MatromatPage() {
     setSpinning(true)
     setCoins(prev => prev - bet)
     setLastWin(0)
+    setWinningLines([])
     setJackpot(false)
 
     // Animate reels
     let spins = 0
     const maxSpins = 20
     const interval = setInterval(() => {
-      setReels(SYMBOLS.sort(() => Math.random() - 0.5).slice(0, 5))
+      setReels([
+        SYMBOLS.sort(() => Math.random() - 0.5).slice(0, 5),
+        SYMBOLS.sort(() => Math.random() - 0.5).slice(0, 5),
+        SYMBOLS.sort(() => Math.random() - 0.5).slice(0, 5),
+      ])
       spins++
 
       if (spins >= maxSpins) {
         clearInterval(interval)
         // Final result
-        const finalReels = Array(5).fill(0).map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)])
+        const finalReels: ReelRow[] = [
+          Array(5).fill(0).map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]),
+          Array(5).fill(0).map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]),
+          Array(5).fill(0).map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]),
+        ]
         setReels(finalReels)
         calculateWin(finalReels)
         setSpinning(false)
@@ -83,35 +105,46 @@ export default function MatromatPage() {
     }, 80)
   }
 
-  const calculateWin = (finalReels: string[]) => {
-    // Count symbol occurrences
-    const counts: Record<string, number> = {}
-    finalReels.forEach(symbol => {
-      counts[symbol] = (counts[symbol] || 0) + 1
-    })
+  const calculateWin = (finalReels: ReelRow[]) => {
+    let totalWin = 0
+    const winLines: number[] = []
 
-    // Find best match
-    let bestMatch = 0
-    let winningSymbol = ""
-    Object.entries(counts).forEach(([symbol, count]) => {
-      if (count > bestMatch) {
-        bestMatch = count
-        winningSymbol = symbol
+    // Check each horizontal line
+    finalReels.forEach((row, lineIndex) => {
+      const counts: Record<string, number> = {}
+      row.forEach(symbol => {
+        counts[symbol] = (counts[symbol] || 0) + 1
+      })
+
+      // Find best match
+      let bestMatch = 0
+      let winningSymbol = ""
+      Object.entries(counts).forEach(([symbol, count]) => {
+        if (count >= 3 && count > bestMatch) {
+          bestMatch = count
+          winningSymbol = symbol
+        }
+      })
+
+      // Calculate payout for this line
+      const payout = PAYOUTS.find(p => p.match === bestMatch)
+      if (payout) {
+        const symbolValue = SYMBOL_VALUES[winningSymbol] || 1
+        const lineWin = bet * payout.multiplier * symbolValue
+        totalWin += lineWin
+        winLines.push(lineIndex)
+        
+        if (bestMatch === 5) {
+          setJackpot(true)
+        }
       }
     })
 
-    // Calculate payout
-    const payout = PAYOUTS.find(p => p.match === bestMatch)
-    if (payout) {
-      const symbolValue = SYMBOL_VALUES[winningSymbol] || 1
-      const winAmount = bet * payout.multiplier * symbolValue
-      setLastWin(winAmount)
-      setCoins(prev => prev + winAmount)
-      setTotalWinnings(prev => prev + winAmount)
-      
-      if (bestMatch === 5) {
-        setJackpot(true)
-      }
+    if (totalWin > 0) {
+      setLastWin(totalWin)
+      setWinningLines(winLines)
+      setCoins(prev => prev + totalWin)
+      setTotalWinnings(prev => prev + totalWin)
     }
   }
 
@@ -125,8 +158,13 @@ export default function MatromatPage() {
     }
     setCoins(1000)
     setBet(10)
-    setReels(["🍕", "🍕", "🍕", "🍕", "🍕"])
+    setReels([
+      ["🍕", "🍺", "📚", "💤", "☕"],
+      ["🍕", "🍺", "📚", "💤", "☕"],
+      ["🍕", "🍺", "📚", "💤", "☕"],
+    ])
     setLastWin(0)
+    setWinningLines([])
     setJackpot(false)
     setTotalWinnings(0)
     setHighScore(0)
@@ -152,7 +190,7 @@ export default function MatromatPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-lg">
+      <main className="container mx-auto px-4 py-8 max-w-3xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Matromat</h1>
           <p className="text-muted-foreground">Toč válce a vyhrávej!</p>
@@ -171,20 +209,24 @@ export default function MatromatPage() {
               </div>
             )}
 
-            {/* Reels */}
-            <div className="flex justify-center gap-2 mb-6 p-4 bg-background/50 rounded-xl border border-border/50">
-              {reels.map((symbol, index) => (
-                <div
-                  key={index}
-                  className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center text-3xl md:text-4xl bg-secondary rounded-lg border-2 ${
-                    spinning
-                      ? "border-primary/50 animate-pulse"
-                      : lastWin > 0
-                      ? "border-chart-4"
-                      : "border-border/50"
-                  }`}
-                >
-                  {symbol}
+            {/* Reels - 3 řádky x 5 válců */}
+            <div className="space-y-2 mb-6 p-4 bg-background/50 rounded-xl border border-border/50">
+              {reels.map((row, rowIndex) => (
+                <div key={rowIndex} className="flex justify-center gap-2">
+                  {row.map((symbol, colIndex) => (
+                    <div
+                      key={colIndex}
+                      className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center text-3xl md:text-4xl bg-secondary rounded-lg border-2 transition-all ${
+                        spinning
+                          ? "border-primary/50 animate-pulse"
+                          : winningLines.includes(rowIndex)
+                          ? "border-chart-4 bg-chart-4/20"
+                          : "border-border/50"
+                      }`}
+                    >
+                      {symbol}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -194,6 +236,7 @@ export default function MatromatPage() {
               <div className="mb-4 text-center">
                 <p className="text-lg text-muted-foreground">Vyhrál jsi</p>
                 <p className="text-3xl font-bold text-chart-4 neon-text">+{lastWin.toLocaleString()} mincí</p>
+                <p className="text-sm text-muted-foreground mt-1">{winningLines.length} vyhrávající {winningLines.length === 1 ? 'řádek' : 'řádky'}</p>
               </div>
             )}
 
@@ -263,12 +306,15 @@ export default function MatromatPage() {
             <div className="space-y-2 text-sm">
               {PAYOUTS.map((payout) => (
                 <div key={payout.match} className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{payout.name} ({payout.match} stejných)</span>
+                  <span className="text-muted-foreground">{payout.name} ({payout.match} stejných v řádku)</span>
                   <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
                     {payout.multiplier}x sázka
                   </Badge>
                 </div>
               ))}
+            </div>
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <p className="text-xs text-muted-foreground">* Můžeš vyhrát na více řádcích najednou!</p>
             </div>
           </CardContent>
         </Card>

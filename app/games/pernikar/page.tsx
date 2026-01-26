@@ -17,86 +17,86 @@ const PRIZE_LEVELS = [
 
 const QUESTIONS = [
   {
-    question: "Co je hlavní ingredience v perníku?",
-    options: ["Med", "Cukr", "Sůl", "Ocet"],
+    question: "Co je typické pro ostravskou smažku?",
+    options: ["Hluk v noci", "Čistota", "Ticho", "Ranní vstávání"],
     correct: 0,
   },
   {
-    question: "Kolik má rok měsíců?",
-    options: ["10", "11", "12", "13"],
-    correct: 2,
-  },
-  {
-    question: "Jaké je hlavní město České republiky?",
-    options: ["Brno", "Ostrava", "Plzeň", "Praha"],
+    question: "Kolik piv vydrží průměrná smažka za večer?",
+    options: ["1-2", "3-5", "6-10", "Nepočítá je"],
     correct: 3,
   },
   {
-    question: "Kolik nohou má pavouk?",
-    options: ["4", "6", "8", "10"],
+    question: "Kde se vyrábí nejlepší perník v Ostravě?",
+    options: ["V pekárně", "Na kolejích", "U feťáka", "V pernikárně"],
+    correct: 3,
+  },
+  {
+    question: "Co dělá vařič pika?",
+    options: ["Kávu", "Čaj", "Pervitin", "Polévku"],
     correct: 2,
   },
   {
-    question: "Jakou barvu má banán když je zralý?",
-    options: ["Zelená", "Červená", "Žlutá", "Modrá"],
-    correct: 2,
-  },
-  {
-    question: "Kdo napsal Babičku?",
-    options: ["Karel Čapek", "Božena Němcová", "Jaroslav Hašek", "Franz Kafka"],
+    question: "Jaká je nejoblíbenější ulice v Ostravě?",
+    options: ["Hlavní", "Stodolní", "Nádražní", "Školní"],
     correct: 1,
   },
   {
-    question: "Kolik planet má naše sluneční soustava?",
-    options: ["7", "8", "9", "10"],
+    question: "Co si smažka nejčastěji objedná?",
+    options: ["Salát", "Smažák", "Sushi", "Ovesnou kaši"],
     correct: 1,
   },
   {
-    question: "V jakém roce padla Berlínská zeď?",
-    options: ["1987", "1989", "1991", "1993"],
+    question: "Kdy smažka chodí spát?",
+    options: ["21:00", "23:00", "01:00", "Až ráno"],
+    correct: 3,
+  },
+  {
+    question: "Co je v Ostravě všude?",
+    options: ["Stromy", "Uhlí", "Kavárny", "Kola"],
     correct: 1,
   },
   {
-    question: "Který prvek má chemickou značku 'Au'?",
-    options: ["Stříbro", "Měď", "Zlato", "Železo"],
-    correct: 2,
+    question: "Jaký je ostravský pozdrav?",
+    options: ["Ahoj", "Čau", "Nazdar", "Hej ty"],
+    correct: 3,
   },
   {
-    question: "Kolik strun má klasická kytara?",
-    options: ["4", "5", "6", "7"],
-    correct: 2,
+    question: "Co smažka studuje nejméně?",
+    options: ["Ráno", "Odpoledne", "Večer", "Vůbec"],
+    correct: 3,
   },
   {
-    question: "Která planeta je nejblíže Slunci?",
-    options: ["Venuše", "Merkur", "Země", "Mars"],
+    question: "Kde feťák skrývá svou várku?",
+    options: ["V bance", "Pod postelí", "V lednici", "U babičky"],
     correct: 1,
   },
   {
-    question: "Kdo je autorem Mony Lisy?",
-    options: ["Michelangelo", "Raphael", "Leonardo da Vinci", "Donatello"],
-    correct: 2,
+    question: "Kolik perníků snědí smažka denně?",
+    options: ["0", "1-2", "3-5", "Kilo"],
+    correct: 0,
   },
   {
-    question: "Jaký je nejvyšší vodopád na světě?",
-    options: ["Niagara", "Angel", "Victoria", "Iguazu"],
+    question: "Co je nejdůležitější na kolejích?",
+    options: ["Studium", "Parta", "Klid", "Čistota"],
     correct: 1,
   },
   {
-    question: "V jakém roce proběhla sametová revoluce?",
-    options: ["1985", "1987", "1989", "1991"],
-    correct: 2,
+    question: "Jaký je nejlepší čas na piko?",
+    options: ["Ráno", "Odpoledne", "Večer", "Vždy"],
+    correct: 3,
   },
   {
-    question: "Jak se jmenuje největší orgán lidského těla?",
-    options: ["Srdce", "Játra", "Kůže", "Plíce"],
-    correct: 2,
+    question: "Co znamená 'jít na jedno'?",
+    options: ["Jedno pivo", "Celou noc", "Domů brzo", "Na kafe"],
+    correct: 1,
   },
 ]
 
 const LIFELINES = {
   fifty: { name: "50:50", icon: HelpCircle, description: "Odstraní 2 špatné odpovědi" },
-  phone: { name: "Telefon", icon: PhoneCall, description: "Zavolej spolubydlícímu" },
-  audience: { name: "Publikum", icon: Users, description: "Zeptej se publika" },
+  phone: { name: "Feťák volá", icon: PhoneCall, description: "Zavolej feťákovi" },
+  audience: { name: "Smažky", icon: Users, description: "Zeptej se smažek" },
 }
 
 export default function PernikarPage() {
@@ -182,9 +182,9 @@ export default function PernikarPage() {
     setLifelines(prev => ({ ...prev, phone: false }))
     
     const hints = [
-      `Hmm, myslím že to je ${question.options[question.correct]}!`,
-      `Nejsem si úplně jistý, ale řekl bych ${question.options[question.correct]}.`,
-      `Jasně! To musí být ${question.options[question.correct]}, ne?`,
+      `Brácho, to je ${question.options[question.correct]}! Věř mi!`,
+      `Tak tohle je jasný, že ${question.options[question.correct]}, ne?`,
+      `Hmm, myslím že ${question.options[question.correct]}... nebo ne? Nevím, jsem zfetovanej.`,
     ]
     setPhoneHint(hints[Math.floor(Math.random() * hints.length)])
   }
@@ -225,6 +225,32 @@ export default function PernikarPage() {
     if (key === "phone") usePhone()
     if (key === "audience") useAudience()
   }
+
+  // Ensure all hooks are called at the top level
+  const [isFiftyFiftyUsed, setIsFiftyFiftyUsed] = useState(false)
+  const [isPhoneUsed, setIsPhoneUsed] = useState(false)
+  const [isAudienceUsed, setIsAudienceUsed] = useState(false)
+
+  useEffect(() => {
+    if (isFiftyFiftyUsed) {
+      useFiftyFifty()
+      setIsFiftyFiftyUsed(false)
+    }
+  }, [isFiftyFiftyUsed])
+
+  useEffect(() => {
+    if (isPhoneUsed) {
+      usePhone()
+      setIsPhoneUsed(false)
+    }
+  }, [isPhoneUsed])
+
+  useEffect(() => {
+    if (isAudienceUsed) {
+      useAudience()
+      setIsAudienceUsed(false)
+    }
+  }, [isAudienceUsed])
 
   return (
     <div className="min-h-screen bg-background">
@@ -372,7 +398,11 @@ export default function PernikarPage() {
                     variant="outline"
                     size="sm"
                     disabled={!available || isAnswerLocked}
-                    onClick={() => handleLifelineClick(key as keyof typeof LIFELINES)}
+                    onClick={() => {
+                      if (key === "fifty") setIsFiftyFiftyUsed(true)
+                      if (key === "phone") setIsPhoneUsed(true)
+                      if (key === "audience") setIsAudienceUsed(true)
+                    }}
                     className={`gap-2 bg-transparent ${available ? "border-accent/50 hover:bg-accent/10" : "opacity-30"}`}
                   >
                     <Icon className="h-4 w-4" />
@@ -391,6 +421,7 @@ export default function PernikarPage() {
                   <h2 className="text-3xl font-bold text-foreground mb-2">VYHRÁVÁŠ!</h2>
                   <p className="text-5xl font-bold text-chart-4 neon-text mb-2">1,000,000</p>
                   <p className="text-xl text-chart-4 mb-6">perníků!</p>
+                  <p className="text-muted-foreground mb-4">Jsi pravá ostravská smažka!</p>
                 </>
               ) : (
                 <>
