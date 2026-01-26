@@ -3,22 +3,63 @@
 import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Users, Circle } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 export function OnlinePlayers() {
   const [onlineCount, setOnlineCount] = useState(0)
+  const supabase = createClient()
 
   useEffect(() => {
-    // Simulate online players with random fluctuation
-    const baseCount = 127
-    const updateCount = () => {
-      const fluctuation = Math.floor(Math.random() * 20) - 10
-      setOnlineCount(Math.max(50, baseCount + fluctuation))
+    const channel = supabase.channel('online-users')
+    
+    // Track this user's presence
+    const trackPresence = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        await channel
+          .on('presence', { event: 'sync' }, () => {
+            const state = channel.presenceState()
+            const users = Object.keys(state).length
+            setOnlineCount(users)
+          })
+          .subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+              await channel.track({
+                user_id: user.id,
+                online_at: new Date().toISOString(),
+              })
+            }
+          })
+      } else {
+        // For non-logged in users, just count other users
+        await channel
+          .on('presence', { event: 'sync' }, () => {
+            const state = channel.presenceState()
+            const users = Object.keys(state).length
+            setOnlineCount(users)
+          })
+          .subscribe()
+      }
     }
-    
-    updateCount()
-    const interval = setInterval(updateCount, 5000)
-    
-    return () => clearInterval(interval)
+
+    trackPresence()
+
+    // Heartbeat to keep presence alive
+    const heartbeat = setInterval(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await channel.track({
+          user_id: user.id,
+          online_at: new Date().toISOString(),
+        })
+      }
+    }, 30000) // Update every 30 seconds
+
+    return () => {
+      clearInterval(heartbeat)
+      channel.unsubscribe()
+    }
   }, [])
 
   return (
