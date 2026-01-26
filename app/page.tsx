@@ -101,7 +101,7 @@ export default function HomePage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Gamepad2 className="h-5 w-5 text-primary" />
-              <span className="font-bold">SMAŽKA<span className="text-primary">HERNA</span></span>
+              <span className="font-bold">SMAŽKA<span className="text-primary">{"DOUPĚ"}</span></span>
             </div>
             <p>Hrej. Soutěž. Vládni.</p>
           </div>
