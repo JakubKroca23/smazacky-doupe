@@ -1,7 +1,6 @@
-import { Header } from "@/components/header"
 import { GameCard } from "@/components/game-card"
 import { OnlinePlayers } from "@/components/online-players"
-import { Gamepad2, Trophy } from "lucide-react"
+import { Gamepad2, Trophy } from "lucide-react" // Declare the Header variable
 
 const games = [
   {
@@ -41,8 +40,6 @@ const games = [
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      
       {/* Hero Section */}
       <section className="relative overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
