@@ -103,7 +103,7 @@ export default function HomePage() {
               <Gamepad2 className="h-5 w-5 text-primary" />
               <span className="font-bold">SMAŽKA<span className="text-primary">{"DOUPĚ"}</span></span>
             </div>
-            <p>Hrej. Soutěž. Vládni.</p>
+            <p>{"Since 2026."}</p>
           </div>
         </div>
       </footer>
