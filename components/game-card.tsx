@@ -4,6 +4,8 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Users, Dices, UsersRound, Trophy, Split as Slot } from "lucide-react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 interface GameCardProps {
   id: string
@@ -11,7 +13,6 @@ interface GameCardProps {
   description: string
   icon: "dice" | "users" | "slot" | "trophy"
   difficulty: "Lehká" | "Střední" | "Těžká"
-  playersOnline?: number
   highScore?: number
 }
 
@@ -34,10 +35,39 @@ export function GameCard({
   description,
   icon,
   difficulty,
-  playersOnline = 0,
   highScore,
 }: GameCardProps) {
   const Icon = iconMap[icon]
+  const [playersOnline, setPlayersOnline] = useState(0)
+  const supabase = createClient()
+
+  useEffect(() => {
+    // Subscribe to game-specific presence channel
+    const channel = supabase.channel(`game-${id}`)
+    
+    // Track presence for this game
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState()
+        const count = Object.keys(state).length
+        setPlayersOnline(count)
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          // Track current user viewing this game card
+          await channel.track({
+            viewing: true,
+            user_id: Math.random().toString(36).substring(7),
+            timestamp: new Date().toISOString(),
+          })
+        }
+      })
+
+    // Cleanup on unmount
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [id, supabase])
 
   return (
     <Link href={`/games/${id}`}>
@@ -63,7 +93,10 @@ export function GameCard({
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-success" />
+              <div className="relative flex items-center">
+                <Users className="h-3.5 w-3.5 text-success" />
+                <span className="absolute -top-1 -right-1 h-2 w-2 bg-success rounded-full animate-pulse" />
+              </div>
               <span>{playersOnline} online</span>
             </div>
             {highScore !== undefined && (

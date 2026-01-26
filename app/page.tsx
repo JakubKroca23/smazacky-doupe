@@ -9,7 +9,6 @@ const games = [
     description: "Hoď kostkami a zkus svůj smažácký štěstí! Sbírej body za kombinace a staň se králem kostek.",
     icon: "dice" as const,
     difficulty: "Lehká" as const,
-    playersOnline: 42,
   },
   {
     id: "conatosmazky",
@@ -17,7 +16,6 @@ const games = [
     description: "Uhodni nejčastější odpovědi spolubydlících. Čím víc lidí odpovědělo stejně, tím víc bodů!",
     icon: "users" as const,
     difficulty: "Střední" as const,
-    playersOnline: 67,
   },
   {
     id: "matromat",
@@ -25,7 +23,6 @@ const games = [
     description: "Výherní automat ve smažáckém stylu! Toč válce a vyhrávej herní měnu za skvělé kombinace.",
     icon: "slot" as const,
     difficulty: "Lehká" as const,
-    playersOnline: 89,
   },
   {
     id: "pernikar",
@@ -33,7 +30,6 @@ const games = [
     description: "Kvízová soutěž ve stylu Milionáře! Odpověz správně a vyhraj až milion perníků.",
     icon: "trophy" as const,
     difficulty: "Těžká" as const,
-    playersOnline: 31,
   },
 ]
 
