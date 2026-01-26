@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Dices, Trophy, RotateCcw, X } from "lucide-react"
+import { ArrowLeft, Dices, Trophy, RotateCcw, X, Users } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
 type DiceValue = 1 | 2 | 3 | 4 | 5 | 6
@@ -19,6 +19,8 @@ interface Player {
 
 export default function KostkyPage() {
   const [user, setUser] = useState<User | null>(null)
+  const [gameStarted, setGameStarted] = useState(false)
+  const [playerCount, setPlayerCount] = useState(2)
   const [dice, setDice] = useState<DiceValue[]>([1, 2, 3, 4, 5, 6])
   const [selected, setSelected] = useState<boolean[]>([false, false, false, false, false, false])
   const [banking, setBanking] = useState<DiceValue[]>([])
@@ -37,6 +39,7 @@ export default function KostkyPage() {
   const [specialOfferDice, setSpecialOfferDice] = useState<DiceValue[]>([])
   const [showSpecialOffer, setShowSpecialOffer] = useState(false)
   const [possiblePoints, setPossiblePoints] = useState<(number | null)[]>([null, null, null, null, null, null])
+  const [hasRolledThisTurn, setHasRolledThisTurn] = useState(false)
   
   const supabase = createClient()
 
@@ -44,12 +47,30 @@ export default function KostkyPage() {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
   }, [supabase.auth])
 
+  const startGame = (numPlayers: number) => {
+    const newPlayers = Array.from({ length: numPlayers }, (_, i) => ({
+      name: `Hráč ${i + 1}`,
+      score: 0,
+      strikes: 0
+    }))
+    setPlayers(newPlayers)
+    setPlayerCount(numPlayers)
+    setGameStarted(true)
+  }
+
   const rollDice = () => {
-    if (rolling) return
+    if (rolling || showSpecialOffer) return
+    
+    // If no dice were banked and we've already rolled, can't roll again
+    if (hasRolledThisTurn && rollCount > 0 && bankingScore === 0) {
+      return
+    }
     
     setRolling(true)
     setMessage("Házení...")
-    setPossiblePoints([null, null, null, null, null, null])
+    setHasRolledThisTurn(true)
+    
+    // Don't clear possible points here - we'll update them after the roll
     
     setTimeout(() => {
       const availableDice = dice.length - selected.filter(s => s).length
@@ -76,13 +97,16 @@ export default function KostkyPage() {
       const selectableDice = getSelectableDice(newDice, selected)
       if (selectableDice.every(s => !s)) {
         // No valid dice to select - turn over with 0 points
-        endTurnWithZero()
+        setMessage("Žádné body k odložení - 0 bodů za tah!")
+        setPossiblePoints([null, null, null, null, null, null])
+        setTimeout(() => endTurnWithZero(), 2000)
         return
       }
       
       // Check third roll requirement
       if (newRollCount === 3 && bankingScore < 350) {
         setMessage("Nedosáhl jsi 350 bodů ve 3. hodu - 0 bodů za tah!")
+        setPossiblePoints([null, null, null, null, null, null])
         setTimeout(() => endTurnWithZero(), 2000)
         return
       }
@@ -92,7 +116,7 @@ export default function KostkyPage() {
       
       setMessage("Klikni na kostky k odložení nebo ukonči tah")
       setFirstRoll(false)
-      setCanEndTurn(true)
+      setCanEndTurn(bankingScore > 0) // Can only end turn if we have banked points
     }, 800)
   }
 
@@ -141,6 +165,7 @@ export default function KostkyPage() {
       setBanking([...diceRoll])
       setSelected([true, true, true, true, true, true])
       setCanEndTurn(true)
+      setPossiblePoints([null, null, null, null, null, null])
       return
     }
     
@@ -153,6 +178,7 @@ export default function KostkyPage() {
       setBanking([...diceRoll])
       setSelected([true, true, true, true, true, true])
       setCanEndTurn(true)
+      setPossiblePoints([null, null, null, null, null, null])
       return
     }
     
@@ -192,7 +218,7 @@ export default function KostkyPage() {
     setShowSpecialOffer(false)
     calculatePossiblePoints(dice, selected)
     setMessage("Klikni na kostky k odložení nebo ukonči tah")
-    setCanEndTurn(true)
+    setCanEndTurn(bankingScore > 0)
   }
 
   const countDice = (diceArray: DiceValue[]) => {
@@ -300,6 +326,7 @@ export default function KostkyPage() {
     
     setBanking(prev => [...prev, ...selectedValues])
     setBankingScore(prev => prev + score)
+    setHasRolledThisTurn(false) // Reset roll flag after banking
     
     // Remove selected dice
     const remainingDice = dice.filter((_, i) => !selectedDice[i])
@@ -313,9 +340,13 @@ export default function KostkyPage() {
       setCanEndTurn(true)
       setFirstRoll(true)
     } else {
-      setDice(remainingDice as DiceValue[])
-      setSelected(Array(remainingDice.length).fill(false))
-      setPossiblePoints(Array(remainingDice.length).fill(null))
+      const newDice = remainingDice as DiceValue[]
+      setDice(newDice)
+      setSelected(Array(newDice.length).fill(false))
+      
+      // Recalculate possible points for remaining dice
+      calculatePossiblePoints(newDice, Array(newDice.length).fill(false))
+      
       setMessage("Hoď zbývajícími kostkami nebo ukonči tah")
       setCanEndTurn(true)
     }
@@ -334,7 +365,7 @@ export default function KostkyPage() {
     }
     
     // Switch player
-    const nextPlayer = (currentPlayer + 1) % 2
+    const nextPlayer = (currentPlayer + 1) % playerCount
     setCurrentPlayer(nextPlayer)
     resetTurn()
     setMessage(`Hráč ${nextPlayer + 1} je na tahu`)
@@ -355,7 +386,7 @@ export default function KostkyPage() {
     setPlayers(newPlayers)
     
     setTimeout(() => {
-      const nextPlayer = (currentPlayer + 1) % 2
+      const nextPlayer = (currentPlayer + 1) % playerCount
       setCurrentPlayer(nextPlayer)
       resetTurn()
       setMessage(`Hráč ${nextPlayer + 1} je na tahu`)
@@ -372,6 +403,7 @@ export default function KostkyPage() {
     setFirstRoll(true)
     setShowSpecialOffer(false)
     setPossiblePoints([null, null, null, null, null, null])
+    setHasRolledThisTurn(false)
   }
 
   const saveScore = async (score: number) => {
@@ -383,14 +415,76 @@ export default function KostkyPage() {
   }
 
   const resetGame = () => {
-    setPlayers([
-      { name: "Hráč 1", score: 0, strikes: 0 },
-      { name: "Hráč 2", score: 0, strikes: 0 }
-    ])
+    const newPlayers = Array.from({ length: playerCount }, (_, i) => ({
+      name: `Hráč ${i + 1}`,
+      score: 0,
+      strikes: 0
+    }))
+    setPlayers(newPlayers)
     setCurrentPlayer(0)
     resetTurn()
     setMessage("Hoď kostkami pro zahájení tahu")
     setGameOver(false)
+  }
+
+  const backToMenu = () => {
+    setGameStarted(false)
+    resetGame()
+  }
+
+  if (!gameStarted) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
+        
+        <header className="p-4 border-b border-border/50">
+          <div className="container mx-auto flex items-center justify-between">
+            <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-4 w-4" />
+              Zpět
+            </Link>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-8 max-w-2xl">
+          <div className="text-center mb-12">
+            <Dices className="h-16 w-16 text-primary mx-auto mb-4" />
+            <h1 className="text-4xl font-bold text-foreground mb-4">Smažácký Kostky</h1>
+            <p className="text-muted-foreground">Vyber počet hráčů pro zahájení hry</p>
+          </div>
+
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardContent className="p-8">
+              <div className="space-y-4">
+                {[2, 3, 4, 5, 6].map((num) => (
+                  <Button
+                    key={num}
+                    onClick={() => startGame(num)}
+                    className="w-full h-16 text-lg bg-primary hover:bg-primary/90 neon-glow"
+                  >
+                    <Users className="h-5 w-5 mr-2" />
+                    {num} Hráči
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Rules Summary */}
+          <Card className="border-border/50 bg-card/30 mt-6">
+            <CardContent className="p-4">
+              <h3 className="font-bold mb-2 text-foreground">Pravidla:</h3>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>• Cílem je získat co nejvíce bodů házením kostek</p>
+                <p>• Ve 3. hodu musíš mít minimálně 350 bodů</p>
+                <p>• 3 nulové tahy za sebou = reset skóre na 0</p>
+                <p>• Odložením všech kostek házíš "do plných"</p>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    )
   }
 
   return (
@@ -399,10 +493,13 @@ export default function KostkyPage() {
       
       <header className="p-4 border-b border-border/50">
         <div className="container mx-auto flex items-center justify-between">
-          <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
+          <button 
+            onClick={backToMenu}
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />
-            Zpět
-          </Link>
+            Menu
+          </button>
         </div>
       </header>
 
@@ -413,7 +510,7 @@ export default function KostkyPage() {
         </div>
 
         {/* Scoreboard */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className={`grid gap-4 mb-6 ${playerCount === 2 ? 'grid-cols-2' : playerCount === 3 ? 'grid-cols-3' : 'grid-cols-2 md:grid-cols-3'}`}>
           {players.map((player, i) => (
             <Card 
               key={i}
@@ -498,7 +595,7 @@ export default function KostkyPage() {
                     >
                       {value}
                     </button>
-                    {points !== null && !selected[index] && (
+                    {points !== null && !selected[index] && rollCount > 0 && (
                       <Badge 
                         className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs px-1.5 py-0.5"
                       >
@@ -513,7 +610,7 @@ export default function KostkyPage() {
             <div className="flex justify-center gap-4 flex-wrap">
               <Button
                 onClick={rollDice}
-                disabled={rolling || showSpecialOffer}
+                disabled={rolling || showSpecialOffer || (hasRolledThisTurn && rollCount > 0 && bankingScore === 0)}
                 className="bg-primary hover:bg-primary/90 neon-glow gap-2"
               >
                 <Dices className="h-5 w-5" />
