@@ -206,12 +206,27 @@ export default function KostkyPage() {
   }
 
   const acceptSpecialOffer = () => {
+    const straightProgress = checkStraightProgress(specialOfferDice)
+    const pairsProgress = checkPairsProgress(specialOfferDice)
+    
+    let offerType = ""
+    if (straightProgress.count >= 5) {
+      offerType = `postupku (chybí ${straightProgress.needed[0]})`
+    } else if (pairsProgress >= 5) {
+      offerType = "třetí pár"
+    }
+    
     setShowSpecialOffer(false)
-    // Freeze 5 dice and roll just one
+    setMessage(`Dohazuješ na ${offerType}...`)
+    
+    // Freeze 5 dice and roll just one - find which die to reroll
     const tempSelected = [true, true, true, true, true, false]
     setSelected(tempSelected)
-    setMessage("Dohazuješ poslední kostku...")
-    rollDice()
+    
+    // Actually perform the reroll after a brief delay
+    setTimeout(() => {
+      rollDice()
+    }, 100)
   }
 
   const declineSpecialOffer = () => {
@@ -354,6 +369,12 @@ export default function KostkyPage() {
 
   const endTurn = () => {
     if (!canEndTurn) return
+    
+    // Check if we're in 3rd roll and don't have 350+ points
+    if (rollCount >= 3 && bankingScore < 350) {
+      setMessage("Nemůžeš ukončit tah - máš méně než 350 bodů ve 3. hodu!")
+      return
+    }
     
     const newPlayers = [...players]
     newPlayers[currentPlayer].score += bankingScore
@@ -550,21 +571,33 @@ export default function KostkyPage() {
         )}
 
         {/* Special Offer */}
-        {showSpecialOffer && (
-          <Card className="mb-4 border-primary bg-primary/10">
-            <CardContent className="p-4">
-              <p className="text-center mb-4">Máš 5/6 kostek pro speciální kombinaci! Chceš 'dohodit'?</p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={acceptSpecialOffer} className="bg-primary">
-                  Dohodit
-                </Button>
-                <Button onClick={declineSpecialOffer} variant="outline" className="bg-transparent">
-                  Odmítnout
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {showSpecialOffer && (() => {
+          const straightProgress = checkStraightProgress(specialOfferDice)
+          const pairsProgress = checkPairsProgress(specialOfferDice)
+          
+          let offerText = ""
+          if (straightProgress.count >= 5) {
+            offerText = `Máš 5/6 pro postupku! Chybí ti ${straightProgress.needed[0]}. Chceš 'dohodit'?`
+          } else if (pairsProgress >= 5) {
+            offerText = "Máš 2/3 páry! Chceš 'dohodit' na třetí pár?"
+          }
+          
+          return (
+            <Card className="mb-4 border-primary bg-primary/10">
+              <CardContent className="p-4">
+                <p className="text-center mb-4">{offerText}</p>
+                <div className="flex gap-2 justify-center">
+                  <Button onClick={acceptSpecialOffer} className="bg-primary">
+                    Dohodit
+                  </Button>
+                  <Button onClick={declineSpecialOffer} variant="outline" className="bg-transparent">
+                    Odmítnout
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })()}
 
         {/* Dice Area */}
         <Card className="mb-6 border-border/50 bg-card/50 backdrop-blur-sm">
