@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Header } from "@/components/header"
 import { LeaderboardTabs } from "@/components/leaderboard-tabs"
 import { Trophy, Medal, Crown } from "lucide-react"
 
@@ -82,8 +81,6 @@ export default async function LeaderboardPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      
       <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
       <div className="fixed top-40 left-1/4 w-96 h-96 bg-chart-4/10 rounded-full blur-3xl -z-10" />
       <div className="fixed bottom-20 right-1/4 w-64 h-64 bg-primary/10 rounded-full blur-3xl -z-10" />
