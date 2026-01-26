@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Dices, Trophy, RotateCcw, X, Users } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { ArrowLeft, Dices, Trophy, RotateCcw, X, Users, Copy, Check } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
 type DiceValue = 1 | 2 | 3 | 4 | 5 | 6
@@ -17,10 +18,27 @@ interface Player {
   strikes: number
 }
 
+interface GameState {
+  id: string
+  dice: DiceValue[]
+  selected: boolean[]
+  banking_score: number
+  current_player: number
+  players: Player[]
+  roll_count: number
+  message: string
+  game_over: boolean
+  host_id: string
+  status: 'waiting' | 'playing' | 'finished'
+}
+
 export default function KostkyPage() {
   const [user, setUser] = useState<User | null>(null)
+  const [mode, setMode] = useState<'menu' | 'local' | 'online'>('menu')
   const [gameStarted, setGameStarted] = useState(false)
   const [playerCount, setPlayerCount] = useState(2)
+  
+  // Local game state
   const [dice, setDice] = useState<DiceValue[]>([1, 2, 3, 4, 5, 6])
   const [selected, setSelected] = useState<boolean[]>([false, false, false, false, false, false])
   const [banking, setBanking] = useState<DiceValue[]>([])
@@ -36,10 +54,14 @@ export default function KostkyPage() {
   const [message, setMessage] = useState("Hoď kostkami pro zahájení tahu")
   const [canEndTurn, setCanEndTurn] = useState(false)
   const [firstRoll, setFirstRoll] = useState(true)
-  const [specialOfferDice, setSpecialOfferDice] = useState<DiceValue[]>([])
-  const [showSpecialOffer, setShowSpecialOffer] = useState(false)
   const [possiblePoints, setPossiblePoints] = useState<(number | null)[]>([null, null, null, null, null, null])
   const [hasRolledThisTurn, setHasRolledThisTurn] = useState(false)
+  
+  // Online multiplayer state
+  const [gameId, setGameId] = useState<string | null>(null)
+  const [joinGameId, setJoinGameId] = useState("")
+  const [copied, setCopied] = useState(false)
+  const [onlinePlayers, setOnlinePlayers] = useState<string[]>([])
   
   const supabase = createClient()
 
@@ -47,7 +69,133 @@ export default function KostkyPage() {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
   }, [supabase.auth])
 
-  const startGame = (numPlayers: number) => {
+  // Online multiplayer - listen to game changes
+  useEffect(() => {
+    if (!gameId || mode !== 'online') return
+
+    const channel = supabase
+      .channel(`game:${gameId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'game_sessions',
+        filter: `id=eq.${gameId}`
+      }, (payload) => {
+        console.log('[v0] Game state changed:', payload)
+        if (payload.new) {
+          const gameState = payload.new as any
+          setDice(gameState.dice)
+          setSelected(gameState.selected)
+          setBankingScore(gameState.banking_score)
+          setCurrentPlayer(gameState.current_player)
+          setPlayers(gameState.players)
+          setRollCount(gameState.roll_count)
+          setMessage(gameState.message)
+          setGameOver(gameState.game_over)
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [gameId, mode, supabase])
+
+  const createOnlineGame = async () => {
+    if (!user) {
+      setMessage("Musíš být přihlášen pro online hru")
+      return
+    }
+
+    const newGameState: any = {
+      dice: [1, 2, 3, 4, 5, 6],
+      selected: [false, false, false, false, false, false],
+      banking_score: 0,
+      current_player: 0,
+      players: [
+        { name: user.email?.split('@')[0] || "Hráč 1", score: 0, strikes: 0 }
+      ],
+      roll_count: 0,
+      message: "Čekání na další hráče...",
+      game_over: false,
+      host_id: user.id,
+      status: 'waiting'
+    }
+
+    const { data, error } = await supabase
+      .from('game_sessions')
+      .insert(newGameState)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[v0] Error creating game:', error)
+      setMessage("Chyba při vytváření hry")
+      return
+    }
+
+    setGameId(data.id)
+    setMode('online')
+    setOnlinePlayers([user.email?.split('@')[0] || "Hráč 1"])
+    setMessage("Hra vytvořena! Sdílej ID s přáteli")
+  }
+
+  const joinOnlineGame = async () => {
+    if (!user || !joinGameId) {
+      setMessage("Musíš být přihlášen a zadat ID hry")
+      return
+    }
+
+    const { data: game, error } = await supabase
+      .from('game_sessions')
+      .select()
+      .eq('id', joinGameId)
+      .single()
+
+    if (error || !game) {
+      setMessage("Hra nenalezena")
+      return
+    }
+
+    const gameState = game as any
+    const updatedPlayers = [
+      ...gameState.players,
+      { name: user.email?.split('@')[0] || `Hráč ${gameState.players.length + 1}`, score: 0, strikes: 0 }
+    ]
+
+    await supabase
+      .from('game_sessions')
+      .update({
+        players: updatedPlayers,
+        status: updatedPlayers.length >= 2 ? 'playing' : 'waiting',
+        message: updatedPlayers.length >= 2 ? "Hoď kostkami pro zahájení tahu" : "Čekání na další hráče..."
+      })
+      .eq('id', joinGameId)
+
+    setGameId(joinGameId)
+    setMode('online')
+    setPlayers(updatedPlayers)
+    setGameStarted(true)
+  }
+
+  const updateGameState = async (updates: Partial<any>) => {
+    if (!gameId) return
+
+    await supabase
+      .from('game_sessions')
+      .update(updates)
+      .eq('id', gameId)
+  }
+
+  const copyGameId = () => {
+    if (gameId) {
+      navigator.clipboard.writeText(gameId)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const startLocalGame = (numPlayers: number) => {
     const newPlayers = Array.from({ length: numPlayers }, (_, i) => ({
       name: `Hráč ${i + 1}`,
       score: 0,
@@ -55,13 +203,13 @@ export default function KostkyPage() {
     }))
     setPlayers(newPlayers)
     setPlayerCount(numPlayers)
+    setMode('local')
     setGameStarted(true)
   }
 
-  const rollDice = () => {
-    if (rolling || showSpecialOffer) return
+  const rollDice = async () => {
+    if (rolling) return
     
-    // If no dice were banked and we've already rolled, can't roll again
     if (hasRolledThisTurn && rollCount > 0 && bankingScore === 0) {
       return
     }
@@ -70,10 +218,7 @@ export default function KostkyPage() {
     setMessage("Házení...")
     setHasRolledThisTurn(true)
     
-    // Don't clear possible points here - we'll update them after the roll
-    
-    setTimeout(() => {
-      const availableDice = dice.length - selected.filter(s => s).length
+    setTimeout(async () => {
       const newDice = [...dice]
       
       for (let i = 0; i < dice.length; i++) {
@@ -83,27 +228,22 @@ export default function KostkyPage() {
       }
       
       setDice(newDice)
-      setRollCount(prev => prev + 1)
+      const newRollCount = rollCount + 1
+      setRollCount(newRollCount)
       setRolling(false)
       
-      const newRollCount = rollCount + 1
-      
-      // Check for special combinations only on first roll
       if (firstRoll) {
         checkSpecialCombinations(newDice)
       }
       
-      // Check if player can select any dice
       const selectableDice = getSelectableDice(newDice, selected)
       if (selectableDice.every(s => !s)) {
-        // No valid dice to select - turn over with 0 points
         setMessage("Žádné body k odložení - 0 bodů za tah!")
         setPossiblePoints([null, null, null, null, null, null])
         setTimeout(() => endTurnWithZero(), 2000)
         return
       }
       
-      // Check third roll requirement
       if (newRollCount === 3 && bankingScore < 350) {
         setMessage("Nedosáhl jsi 350 bodů ve 3. hodu - 0 bodů za tah!")
         setPossiblePoints([null, null, null, null, null, null])
@@ -111,12 +251,19 @@ export default function KostkyPage() {
         return
       }
       
-      // Calculate possible points for each die
       calculatePossiblePoints(newDice, selected)
       
       setMessage("Klikni na kostky k odložení nebo ukonči tah")
       setFirstRoll(false)
-      setCanEndTurn(bankingScore > 0) // Can only end turn if we have banked points
+      setCanEndTurn(bankingScore > 0)
+
+      if (mode === 'online') {
+        await updateGameState({
+          dice: newDice,
+          roll_count: newRollCount,
+          message: "Klikni na kostky k odložení nebo ukonči tah"
+        })
+      }
     }, 800)
   }
 
@@ -143,7 +290,6 @@ export default function KostkyPage() {
         else if (dieCount >= 3) points[i] = 500
         else points[i] = 50
       } else {
-        // 2, 3, 4, 6 only score from 3+
         if (dieCount >= 6) points[i] = die * 400
         else if (dieCount >= 5) points[i] = die * 300
         else if (dieCount >= 4) points[i] = die * 200
@@ -158,7 +304,6 @@ export default function KostkyPage() {
   const checkSpecialCombinations = (diceRoll: DiceValue[]) => {
     const sorted = [...diceRoll].sort()
     
-    // Check for straight (1,2,3,4,5,6)
     if (sorted.join("") === "123456") {
       setMessage("Postupka! +2000 bodů!")
       setBankingScore(prev => prev + 2000)
@@ -169,7 +314,6 @@ export default function KostkyPage() {
       return
     }
     
-    // Check for pairs (three different pairs)
     const counts = countDice(diceRoll)
     const pairs = Object.entries(counts).filter(([_, count]) => count === 2)
     if (pairs.length === 3) {
@@ -181,59 +325,6 @@ export default function KostkyPage() {
       setPossiblePoints([null, null, null, null, null, null])
       return
     }
-    
-    // Check for 5 dice toward straight or pairs
-    const straightProgress = checkStraightProgress(diceRoll)
-    const pairsProgress = checkPairsProgress(diceRoll)
-    
-    if (straightProgress.count >= 5 || pairsProgress >= 5) {
-      setSpecialOfferDice(diceRoll)
-      setShowSpecialOffer(true)
-      setMessage("Máš možnost 'dohodit' poslední kostku!")
-    }
-  }
-
-  const checkStraightProgress = (diceRoll: DiceValue[]) => {
-    const unique = [...new Set(diceRoll)].sort()
-    const needed = [1, 2, 3, 4, 5, 6].filter(n => !unique.includes(n as DiceValue))
-    return { count: unique.length, needed }
-  }
-
-  const checkPairsProgress = (diceRoll: DiceValue[]) => {
-    const counts = countDice(diceRoll)
-    const pairs = Object.entries(counts).filter(([_, count]) => count === 2)
-    return pairs.length * 2
-  }
-
-  const acceptSpecialOffer = () => {
-    const straightProgress = checkStraightProgress(specialOfferDice)
-    const pairsProgress = checkPairsProgress(specialOfferDice)
-    
-    let offerType = ""
-    if (straightProgress.count >= 5) {
-      offerType = `postupku (chybí ${straightProgress.needed[0]})`
-    } else if (pairsProgress >= 5) {
-      offerType = "třetí pár"
-    }
-    
-    setShowSpecialOffer(false)
-    setMessage(`Dohazuješ na ${offerType}...`)
-    
-    // Freeze 5 dice and roll just one - find which die to reroll
-    const tempSelected = [true, true, true, true, true, false]
-    setSelected(tempSelected)
-    
-    // Actually perform the reroll after a brief delay
-    setTimeout(() => {
-      rollDice()
-    }, 100)
-  }
-
-  const declineSpecialOffer = () => {
-    setShowSpecialOffer(false)
-    calculatePossiblePoints(dice, selected)
-    setMessage("Klikni na kostky k odložení nebo ukonči tah")
-    setCanEndTurn(bankingScore > 0)
   }
 
   const countDice = (diceArray: DiceValue[]) => {
@@ -247,7 +338,6 @@ export default function KostkyPage() {
   const calculateDiceScore = (diceArray: DiceValue[], counts: Record<number, number>) => {
     let score = 0
     
-    // Check combinations for each value
     for (const [value, count] of Object.entries(counts)) {
       const val = Number(value) as DiceValue
       
@@ -256,15 +346,14 @@ export default function KostkyPage() {
         else if (count >= 5) score += 3000
         else if (count >= 4) score += 2000
         else if (count >= 3) score += 1000
-        else score += count * 100 // 1x or 2x
+        else score += count * 100
       } else if (val === 5) {
         if (count >= 6) score += 2000
         else if (count >= 5) score += 1500
         else if (count >= 4) score += 1000
         else if (count >= 3) score += 500
-        else score += count * 50 // 1x or 2x
+        else score += count * 50
       } else {
-        // 2, 3, 4, 6 only score from 3+
         if (count >= 6) score += val * 400
         else if (count >= 5) score += val * 300
         else if (count >= 4) score += val * 200
@@ -282,16 +371,14 @@ export default function KostkyPage() {
     diceArray.forEach((die, i) => {
       if (currentSelected[i]) return
       
-      // 1s and 5s always selectable (unless already part of 3+)
       if (die === 1 || die === 5) {
         const count = counts[die]
         if (count >= 3) {
-          selectable[i] = true // Part of combination
+          selectable[i] = true
         } else {
-          selectable[i] = true // Individual scoring
+          selectable[i] = true
         }
       } else {
-        // 2, 3, 4, 6 only selectable if 3+ exist
         if (counts[die] >= 3) {
           selectable[i] = true
         }
@@ -301,7 +388,7 @@ export default function KostkyPage() {
     return selectable
   }
 
-  const toggleSelectDie = (index: number) => {
+  const toggleSelectDie = async (index: number) => {
     if (rolling || rollCount === 0) return
     
     const selectable = getSelectableDice(dice, selected)
@@ -310,29 +397,24 @@ export default function KostkyPage() {
     const newSelected = [...selected]
     const dieValue = dice[index]
     
-    // If selecting, check if it's part of a 3+ combination
     const unselectedDice = dice.filter((_, i) => !selected[i])
     const counts = countDice(unselectedDice)
     
     if (!newSelected[index] && counts[dieValue] >= 3) {
-      // Select all dice of this value (combination)
       dice.forEach((d, i) => {
         if (d === dieValue && !selected[i]) {
           newSelected[i] = true
         }
       })
     } else {
-      // Toggle single die (for 1s and 5s with count < 3)
       newSelected[index] = !newSelected[index]
     }
     
     setSelected(newSelected)
-    
-    // After selecting, bank them and continue or end turn
-    bankDice(newSelected)
+    await bankDice(newSelected)
   }
 
-  const bankDice = (selectedDice: boolean[]) => {
+  const bankDice = async (selectedDice: boolean[]) => {
     const selectedValues = dice.filter((_, i) => selectedDice[i])
     if (selectedValues.length === 0) return
     
@@ -340,13 +422,12 @@ export default function KostkyPage() {
     const score = calculateDiceScore(selectedValues, counts)
     
     setBanking(prev => [...prev, ...selectedValues])
-    setBankingScore(prev => prev + score)
-    setHasRolledThisTurn(false) // Reset roll flag after banking
+    const newBankingScore = bankingScore + score
+    setBankingScore(newBankingScore)
+    setHasRolledThisTurn(false)
     
-    // Remove selected dice
     const remainingDice = dice.filter((_, i) => !selectedDice[i])
     
-    // If all dice selected, go "do plných"
     if (remainingDice.length === 0) {
       setMessage("Do plných! Hoď všemi kostkami nebo ukonči tah")
       setDice([1, 2, 3, 4, 5, 6])
@@ -354,23 +435,39 @@ export default function KostkyPage() {
       setPossiblePoints([null, null, null, null, null, null])
       setCanEndTurn(true)
       setFirstRoll(true)
+
+      if (mode === 'online') {
+        await updateGameState({
+          dice: [1, 2, 3, 4, 5, 6],
+          selected: [false, false, false, false, false, false],
+          banking_score: newBankingScore,
+          message: "Do plných! Hoď všemi kostkami nebo ukonči tah"
+        })
+      }
     } else {
       const newDice = remainingDice as DiceValue[]
       setDice(newDice)
       setSelected(Array(newDice.length).fill(false))
       
-      // Recalculate possible points for remaining dice
       calculatePossiblePoints(newDice, Array(newDice.length).fill(false))
       
       setMessage("Hoď zbývajícími kostkami nebo ukonči tah")
       setCanEndTurn(true)
+
+      if (mode === 'online') {
+        await updateGameState({
+          dice: newDice,
+          selected: Array(newDice.length).fill(false),
+          banking_score: newBankingScore,
+          message: "Hoď zbývajícími kostkami nebo ukonči tah"
+        })
+      }
     }
   }
 
-  const endTurn = () => {
+  const endTurn = async () => {
     if (!canEndTurn) return
     
-    // Check if we're in 3rd roll and don't have 350+ points
     if (rollCount >= 3 && bankingScore < 350) {
       setMessage("Nemůžeš ukončit tah - máš méně než 350 bodů ve 3. hodu!")
       return
@@ -378,21 +475,32 @@ export default function KostkyPage() {
     
     const newPlayers = [...players]
     newPlayers[currentPlayer].score += bankingScore
-    newPlayers[currentPlayer].strikes = 0 // Reset strikes on successful turn
+    newPlayers[currentPlayer].strikes = 0
     setPlayers(newPlayers)
     
-    if (user && currentPlayer === 0) {
+    if (user && currentPlayer === 0 && mode === 'local') {
       saveScore(newPlayers[0].score)
     }
     
-    // Switch player
-    const nextPlayer = (currentPlayer + 1) % playerCount
+    const nextPlayer = (currentPlayer + 1) % players.length
     setCurrentPlayer(nextPlayer)
     resetTurn()
     setMessage(`Hráč ${nextPlayer + 1} je na tahu`)
+
+    if (mode === 'online') {
+      await updateGameState({
+        players: newPlayers,
+        current_player: nextPlayer,
+        dice: [1, 2, 3, 4, 5, 6],
+        selected: [false, false, false, false, false, false],
+        banking_score: 0,
+        roll_count: 0,
+        message: `${newPlayers[nextPlayer].name} je na tahu`
+      })
+    }
   }
 
-  const endTurnWithZero = () => {
+  const endTurnWithZero = async () => {
     const newPlayers = [...players]
     newPlayers[currentPlayer].strikes += 1
     
@@ -406,11 +514,23 @@ export default function KostkyPage() {
     
     setPlayers(newPlayers)
     
-    setTimeout(() => {
-      const nextPlayer = (currentPlayer + 1) % playerCount
+    setTimeout(async () => {
+      const nextPlayer = (currentPlayer + 1) % players.length
       setCurrentPlayer(nextPlayer)
       resetTurn()
       setMessage(`Hráč ${nextPlayer + 1} je na tahu`)
+
+      if (mode === 'online') {
+        await updateGameState({
+          players: newPlayers,
+          current_player: nextPlayer,
+          dice: [1, 2, 3, 4, 5, 6],
+          selected: [false, false, false, false, false, false],
+          banking_score: 0,
+          roll_count: 0,
+          message: `${newPlayers[nextPlayer].name} je na tahu`
+        })
+      }
     }, 2000)
   }
 
@@ -422,7 +542,6 @@ export default function KostkyPage() {
     setRollCount(0)
     setCanEndTurn(false)
     setFirstRoll(true)
-    setShowSpecialOffer(false)
     setPossiblePoints([null, null, null, null, null, null])
     setHasRolledThisTurn(false)
   }
@@ -436,7 +555,7 @@ export default function KostkyPage() {
   }
 
   const resetGame = () => {
-    const newPlayers = Array.from({ length: playerCount }, (_, i) => ({
+    const newPlayers = Array.from({ length: players.length }, (_, i) => ({
       name: `Hráč ${i + 1}`,
       score: 0,
       strikes: 0
@@ -449,49 +568,77 @@ export default function KostkyPage() {
   }
 
   const backToMenu = () => {
+    setMode('menu')
     setGameStarted(false)
+    setGameId(null)
     resetGame()
   }
 
-  if (!gameStarted) {
+  // Main menu
+  if (mode === 'menu') {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-12">
         <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
-        
-        <header className="p-4 border-b border-border/50">
-          <div className="container mx-auto flex items-center justify-between">
-            <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-              Zpět
-            </Link>
-          </div>
-        </header>
 
         <main className="container mx-auto px-4 py-8 max-w-2xl">
           <div className="text-center mb-12">
             <Dices className="h-16 w-16 text-primary mx-auto mb-4" />
             <h1 className="text-4xl font-bold text-foreground mb-4">Smažácký Kostky</h1>
-            <p className="text-muted-foreground">Vyber počet hráčů pro zahájení hry</p>
+            <p className="text-muted-foreground">Vyber herní režim</p>
           </div>
 
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-            <CardContent className="p-8">
-              <div className="space-y-4">
-                {[2, 3, 4, 5, 6].map((num) => (
-                  <Button
-                    key={num}
-                    onClick={() => startGame(num)}
-                    className="w-full h-16 text-lg bg-primary hover:bg-primary/90 neon-glow"
-                  >
-                    <Users className="h-5 w-5 mr-2" />
-                    {num} Hráči
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold mb-4 text-foreground">Lokální hra</h3>
+                <p className="text-sm text-muted-foreground mb-4">Hraj na jednom zařízení s přáteli</p>
+                <div className="space-y-2">
+                  {[2, 3, 4, 5, 6].map((num) => (
+                    <Button
+                      key={num}
+                      onClick={() => startLocalGame(num)}
+                      className="w-full bg-primary hover:bg-primary/90"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      {num} Hráči
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Rules Summary */}
+            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold mb-4 text-foreground">Online multiplayer</h3>
+                <p className="text-sm text-muted-foreground mb-4">Hraj s přáteli na různých zařízeních</p>
+                
+                {!user ? (
+                  <p className="text-sm text-destructive">Musíš být přihlášen pro online hru</p>
+                ) : (
+                  <div className="space-y-3">
+                    <Button
+                      onClick={createOnlineGame}
+                      className="w-full bg-chart-4 hover:bg-chart-4/90"
+                    >
+                      Vytvořit hru
+                    </Button>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="ID hry"
+                        value={joinGameId}
+                        onChange={(e) => setJoinGameId(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button onClick={joinOnlineGame} variant="outline" className="bg-transparent">
+                        Připojit
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
           <Card className="border-border/50 bg-card/30 mt-6">
             <CardContent className="p-4">
               <h3 className="font-bold mb-2 text-foreground">Pravidla:</h3>
@@ -508,30 +655,88 @@ export default function KostkyPage() {
     )
   }
 
+  // Online game lobby
+  if (mode === 'online' && gameId && !gameStarted) {
+    return (
+      <div className="min-h-screen bg-background pt-12">
+        <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
+
+        <main className="container mx-auto px-4 py-8 max-w-2xl">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-4">Online hra vytvořena</h1>
+            <p className="text-muted-foreground">Sdílej ID s přáteli</p>
+          </div>
+
+          <Card className="border-primary/50 bg-primary/5 mb-6">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">ID hry:</p>
+                  <p className="text-xl font-mono font-bold text-foreground">{gameId}</p>
+                </div>
+                <Button onClick={copyGameId} variant="outline" size="icon" className="bg-transparent">
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 bg-card/50 mb-6">
+            <CardContent className="p-6">
+              <h3 className="font-bold mb-4 text-foreground">Hráči v lobby ({onlinePlayers.length})</h3>
+              <div className="space-y-2">
+                {onlinePlayers.map((player, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2 bg-secondary/50 rounded">
+                    <Users className="h-4 w-4 text-primary" />
+                    <span className="text-foreground">{player}</span>
+                    {i === 0 && <Badge variant="outline">Host</Badge>}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-2">
+            <Button onClick={() => setGameStarted(true)} className="flex-1 bg-primary hover:bg-primary/90">
+              Začít hru
+            </Button>
+            <Button onClick={backToMenu} variant="outline" className="bg-transparent">
+              Zrušit
+            </Button>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // Game screen
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-12">
       <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
-      
-      <header className="p-4 border-b border-border/50">
-        <div className="container mx-auto flex items-center justify-between">
+
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="flex items-center justify-between mb-6">
           <button 
             onClick={backToMenu}
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm"
           >
             <ArrowLeft className="h-4 w-4" />
             Menu
           </button>
+          {mode === 'online' && gameId && (
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="font-mono text-xs">{gameId.slice(0, 8)}</Badge>
+            </div>
+          )}
         </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Smažácký Kostky</h1>
-          <p className="text-muted-foreground">{message}</p>
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Smažácký Kostky</h1>
+          <p className="text-sm text-muted-foreground">{message}</p>
         </div>
 
         {/* Scoreboard */}
-        <div className={`grid gap-4 mb-6 ${playerCount === 2 ? 'grid-cols-2' : playerCount === 3 ? 'grid-cols-3' : 'grid-cols-2 md:grid-cols-3'}`}>
+        <div className={`grid gap-3 mb-6 ${players.length === 2 ? 'grid-cols-2' : players.length === 3 ? 'grid-cols-3' : 'grid-cols-2 md:grid-cols-3'}`}>
           {players.map((player, i) => (
             <Card 
               key={i}
@@ -541,15 +746,15 @@ export default function KostkyPage() {
                   : "border-border/50 bg-card/30"
               }`}
             >
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="text-center">
-                  <p className={`font-bold mb-2 ${currentPlayer === i ? "text-primary" : "text-muted-foreground"}`}>
+                  <p className={`font-bold text-sm mb-2 ${currentPlayer === i ? "text-primary" : "text-muted-foreground"}`}>
                     {player.name}
                   </p>
-                  <p className="text-3xl font-bold text-foreground mb-2">{player.score}</p>
+                  <p className="text-2xl font-bold text-foreground mb-2">{player.score}</p>
                   <div className="flex gap-1 justify-center">
                     {Array.from({ length: player.strikes }).map((_, j) => (
-                      <X key={j} className="h-4 w-4 text-destructive" />
+                      <X key={j} className="h-3 w-3 text-destructive" />
                     ))}
                   </div>
                 </div>
@@ -561,142 +766,62 @@ export default function KostkyPage() {
         {/* Banking Area */}
         {bankingScore > 0 && (
           <Card className="mb-4 border-chart-4/50 bg-chart-4/5">
-            <CardContent className="p-4">
+            <CardContent className="p-3">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-2">Odložené body</p>
-                <p className="text-2xl font-bold text-chart-4">{bankingScore}</p>
+                <p className="text-xs text-muted-foreground mb-1">Odložené body</p>
+                <p className="text-xl font-bold text-chart-4">{bankingScore}</p>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Special Offer */}
-        {showSpecialOffer && (() => {
-          const straightProgress = checkStraightProgress(specialOfferDice)
-          const pairsProgress = checkPairsProgress(specialOfferDice)
-          
-          let offerText = ""
-          if (straightProgress.count >= 5) {
-            offerText = `Máš 5/6 pro postupku! Chybí ti ${straightProgress.needed[0]}. Chceš 'dohodit'?`
-          } else if (pairsProgress >= 5) {
-            offerText = "Máš 2/3 páry! Chceš 'dohodit' na třetí pár?"
-          }
-          
-          return (
-            <Card className="mb-4 border-primary bg-primary/10">
-              <CardContent className="p-4">
-                <p className="text-center mb-4">{offerText}</p>
-                <div className="flex gap-2 justify-center">
-                  <Button onClick={acceptSpecialOffer} className="bg-primary">
-                    Dohodit
-                  </Button>
-                  <Button onClick={declineSpecialOffer} variant="outline" className="bg-transparent">
-                    Odmítnout
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })()}
-
-        {/* Dice Area */}
-        <Card className="mb-6 border-border/50 bg-card/50 backdrop-blur-sm">
-          <CardContent className="p-6">
-            <div className="flex justify-center gap-3 mb-6 flex-wrap">
-              {dice.map((value, index) => {
-                const selectable = getSelectableDice(dice, selected)
-                const isSelectable = selectable[index] && rollCount > 0
-                const points = possiblePoints[index]
-                
-                return (
-                  <div key={index} className="relative">
-                    <button
-                      onClick={() => toggleSelectDie(index)}
-                      disabled={!isSelectable || rolling}
-                      className={`relative w-16 h-16 md:w-20 md:h-20 rounded-xl text-3xl md:text-4xl font-bold transition-all border-2 ${
-                        rolling
-                          ? "animate-spin bg-primary/20 text-primary border-primary/30"
-                          : selected[index]
-                          ? "bg-chart-4/20 text-chart-4 border-chart-4"
-                          : isSelectable
-                          ? "bg-primary/10 text-foreground border-primary/50 hover:bg-primary/20 cursor-pointer hover:scale-105"
-                          : "bg-secondary/50 text-muted-foreground border-border/30 cursor-not-allowed"
-                      }`}
-                      style={{
-                        animation: rolling && !selected[index] ? 'spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55)' : 'none'
-                      }}
-                    >
-                      {value}
-                    </button>
-                    {points !== null && !selected[index] && rollCount > 0 && (
-                      <Badge 
-                        className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs px-1.5 py-0.5"
-                      >
-                        +{points}
-                      </Badge>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="flex justify-center gap-4 flex-wrap">
-              <Button
-                onClick={rollDice}
-                disabled={rolling || showSpecialOffer || (hasRolledThisTurn && rollCount > 0 && bankingScore === 0)}
-                className="bg-primary hover:bg-primary/90 neon-glow gap-2"
-              >
-                <Dices className="h-5 w-5" />
-                Hodit
-              </Button>
-              
-              {canEndTurn && (
-                <Button
-                  onClick={endTurn}
-                  disabled={rolling}
-                  className="bg-success hover:bg-success/90 gap-2"
-                >
-                  <Trophy className="h-4 w-4" />
-                  Ukončit tah
-                </Button>
+        {/* Dice Grid */}
+        <div className="grid grid-cols-3 gap-4 mb-6 max-w-md mx-auto">
+          {dice.map((die, i) => (
+            <button
+              key={i}
+              onClick={() => toggleSelectDie(i)}
+              disabled={rolling || rollCount === 0 || selected[i]}
+              className={`relative aspect-square rounded-xl flex items-center justify-center text-4xl font-bold transition-all
+                ${rolling && !selected[i] ? 'animate-spin' : ''}
+                ${selected[i] 
+                  ? 'bg-secondary/30 text-muted-foreground cursor-not-allowed' 
+                  : getSelectableDice(dice, selected)[i]
+                    ? 'bg-primary/20 text-primary hover:bg-primary/30 cursor-pointer border-2 border-primary'
+                    : 'bg-card/50 text-muted-foreground cursor-not-allowed'
+                }`}
+            >
+              {die}
+              {possiblePoints[i] !== null && !selected[i] && (
+                <Badge className="absolute -top-2 -right-2 bg-chart-4 text-xs">
+                  +{possiblePoints[i]}
+                </Badge>
               )}
-              
-              <Button
-                onClick={resetGame}
-                variant="outline"
-                className="border-border hover:bg-secondary gap-2 bg-transparent"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Nová hra
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </button>
+          ))}
+        </div>
 
-        {/* Rules Summary */}
-        <Card className="border-border/50 bg-card/30">
-          <CardContent className="p-4">
-            <h3 className="font-bold mb-2 text-foreground">Bodování:</h3>
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>• 1x jednička = 100b | 3x = 1000b | 4x = 2000b | 5x = 3000b | 6x = 4000b</p>
-              <p>• 1x pětka = 50b | 3x = 500b | 4x = 1000b | 5x = 1500b | 6x = 2000b</p>
-              <p>• 3x dvojka = 200b | 3x trojka = 300b | 3x čtyřka = 400b | 3x šestka = 600b</p>
-              <p>• Postupka (1-6) = 2000b | 3 páry = 700b</p>
-              <p>• Minimum 350b ve 3. hodu! | 3 čárky = reset skóre</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Controls */}
+        <div className="flex gap-3 max-w-md mx-auto">
+          <Button
+            onClick={rollDice}
+            disabled={rolling || (rollCount > 0 && !canEndTurn)}
+            className="flex-1 bg-primary hover:bg-primary/90"
+          >
+            <Dices className="h-4 w-4 mr-2" />
+            Hodit ({rollCount}/3)
+          </Button>
+          <Button
+            onClick={endTurn}
+            disabled={!canEndTurn || rollCount >= 3 && bankingScore < 350}
+            variant="outline"
+            className="flex-1 bg-transparent"
+          >
+            <Trophy className="h-4 w-4 mr-2" />
+            Ukončit tah
+          </Button>
+        </div>
       </main>
-
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg) translateX(0) translateY(0); }
-          25% { transform: rotate(180deg) translateX(10px) translateY(-10px); }
-          50% { transform: rotate(360deg) translateX(-10px) translateY(10px); }
-          75% { transform: rotate(540deg) translateX(10px) translateY(-5px); }
-          100% { transform: rotate(720deg) translateX(0) translateY(0); }
-        }
-      `}</style>
     </div>
   )
 }

@@ -49,15 +49,12 @@ export function Header() {
   ]
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur-xl shadow-lg">
+      <div className="container mx-auto flex h-12 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="relative">
-            <Gamepad2 className="h-8 w-8 text-primary neon-text transition-all group-hover:scale-110" />
-            <div className="absolute inset-0 blur-lg bg-primary/30 -z-10" />
-          </div>
-          <span className="text-xl font-bold tracking-wider text-foreground neon-text hidden sm:block">
+          <Gamepad2 className="h-6 w-6 text-primary transition-all group-hover:scale-110" />
+          <span className="text-base font-bold tracking-wider text-foreground hidden sm:block">
             SMAŽÁCKÝ<span className="text-primary"> DOUPĚ</span>
           </span>
         </Link>
@@ -71,13 +68,13 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   isActive
-                    ? "bg-primary/20 text-primary neon-border"
+                    ? "bg-primary/20 text-primary"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
                 {item.label}
               </Link>
             )
@@ -93,10 +90,11 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="border-primary/50 hover:border-primary hover:bg-primary/10 gap-2 bg-transparent"
+                  size="sm"
+                  className="border-primary/50 hover:border-primary hover:bg-primary/10 gap-1.5 bg-transparent h-8 text-xs"
                 >
-                  <User className="h-4 w-4" />
-                  <span className="hidden sm:inline max-w-24 truncate">
+                  <User className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline max-w-20 truncate">
                     {user.email?.split("@")[0]}
                   </span>
                 </Button>
@@ -125,14 +123,14 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Link href="/auth/login">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground h-8 text-xs">
                   Přihlásit
                 </Button>
               </Link>
               <Link href="/auth/sign-up">
-                <Button size="sm" className="bg-primary hover:bg-primary/90 neon-glow">
+                <Button size="sm" className="bg-primary hover:bg-primary/90 h-8 text-xs">
                   Registrace
                 </Button>
               </Link>
