@@ -1,55 +1,55 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Coins, RotateCcw, Sparkles, Trophy, Plus, Minus } from "lucide-react"
+import { ArrowLeft, Coins, RotateCcw, Sparkles, Plus, Minus } from "lucide-react"
+import { audioManager } from "@/lib/audio-manager"
 import type { User } from "@supabase/supabase-js"
 
-const SYMBOLS = ["🍕", "🍺", "📚", "💤", "☕", "🎮", "🍜"]
-const SYMBOL_VALUES: Record<string, number> = {
-  "🍕": 2,
-  "🍺": 3,
-  "📚": 4,
-  "💤": 5,
-  "☕": 3,
-  "🎮": 4,
-  "🍜": 2,
+// New drug-themed symbols
+const SYMBOLS = ["💊", "💉", "🧪", "⚗️", "💎", "🌿", "❄️"]
+const SYMBOL_NAMES: Record<string, string> = {
+  "💊": "MATRA",
+  "💉": "DROG",
+  "🧪": "PERVITIN",
+  "⚗️": "CHEMIE",
+  "💎": "KRYSTAL",
+  "🌿": "TRÁVA",
+  "❄️": "SNÍH",
 }
 
-type ReelRow = string[]
+const SYMBOL_VALUES: Record<string, number> = {
+  "💊": 2,
+  "💉": 5,
+  "🧪": 10,
+  "⚗️": 3,
+  "💎": 15,
+  "🌿": 1,
+  "❄️": 8,
+}
 
-const PAYOUTS = [
-  { match: 3, multiplier: 3, name: "Trojice" },
-  { match: 4, multiplier: 10, name: "Čtveřice" },
-  { match: 5, multiplier: 50, name: "JACKPOT!" },
-]
-
-const LINE_PAYOUTS = [
-  { lines: 1, multiplier: 1 },
-  { lines: 2, multiplier: 3 },
-  { lines: 3, multiplier: 5 },
-]
+// 9x9 grid = 81 lines total
+// Lines: 9 horizontal + 9 vertical + 18 diagonal (9+9) + many other patterns
+type Grid = string[][]
 
 export default function MatromatPage() {
   const [user, setUser] = useState<User | null>(null)
   const [coins, setCoins] = useState(1000)
   const [bet, setBet] = useState(10)
-  const [reels, setReels] = useState<ReelRow[]>([
-    ["🍕", "🍺", "📚", "💤", "☕"],
-    ["🍕", "🍺", "📚", "💤", "☕"],
-    ["🍕", "🍺", "📚", "💤", "☕"],
-  ])
+  const [grid, setGrid] = useState<Grid>(Array(9).fill(null).map(() => Array(9).fill("💊")))
   const [spinning, setSpinning] = useState(false)
   const [lastWin, setLastWin] = useState(0)
-  const [winningLines, setWinningLines] = useState<number[]>([])
+  const [winningCells, setWinningCells] = useState<Set<string>>(new Set())
   const [jackpot, setJackpot] = useState(false)
   const [totalWinnings, setTotalWinnings] = useState(0)
   const [highScore, setHighScore] = useState(0)
+  const [animationProgress, setAnimationProgress] = useState(0)
   const supabase = createClient()
+  const animationRef = useRef<number | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
@@ -76,80 +76,158 @@ export default function MatromatPage() {
     setSpinning(true)
     setCoins(prev => prev - bet)
     setLastWin(0)
-    setWinningLines([])
+    setWinningCells(new Set())
     setJackpot(false)
+    setAnimationProgress(0)
+    audioManager.playSound('dice')
 
-    // Animate reels
-    let spins = 0
-    const maxSpins = 20
-    const interval = setInterval(() => {
-      setReels([
-        SYMBOLS.sort(() => Math.random() - 0.5).slice(0, 5),
-        SYMBOLS.sort(() => Math.random() - 0.5).slice(0, 5),
-        SYMBOLS.sort(() => Math.random() - 0.5).slice(0, 5),
-      ])
-      spins++
-
-      if (spins >= maxSpins) {
-        clearInterval(interval)
-        // Final result
-        const finalReels: ReelRow[] = [
-          Array(5).fill(0).map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]),
-          Array(5).fill(0).map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]),
-          Array(5).fill(0).map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]),
-        ]
-        setReels(finalReels)
-        calculateWin(finalReels)
+    // Smooth column-by-column animation from left to right
+    let columnIndex = 0
+    const animateColumn = () => {
+      if (columnIndex < 9) {
+        // Update this column with random symbols
+        setGrid(prev => {
+          const newGrid = prev.map(row => [...row])
+          for (let row = 0; row < 9; row++) {
+            newGrid[row][columnIndex] = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]
+          }
+          return newGrid
+        })
+        columnIndex++
+        setAnimationProgress((columnIndex / 9) * 100)
+        animationRef.current = window.setTimeout(animateColumn, 100) // 100ms per column = smooth
+      } else {
+        // Animation complete, calculate win
         setSpinning(false)
+        setAnimationProgress(100)
+        calculateWin()
       }
-    }, 80)
+    }
+
+    animateColumn()
   }
 
-  const calculateWin = (finalReels: ReelRow[]) => {
+  const calculateWin = () => {
+    const newGrid = grid
     let totalWin = 0
-    const winLines: number[] = []
+    const winCells = new Set<string>()
+    let hasJackpot = false
 
-    // Check each horizontal line
-    finalReels.forEach((row, lineIndex) => {
+    // Check all 81 possible winning lines
+    const lines: number[][][] = []
+
+    // Horizontal lines (9)
+    for (let row = 0; row < 9; row++) {
+      lines.push(Array(9).fill(null).map((_, col) => [row, col]))
+    }
+
+    // Vertical lines (9)
+    for (let col = 0; col < 9; col++) {
+      lines.push(Array(9).fill(null).map((_, row) => [row, col]))
+    }
+
+    // Main diagonals (2)
+    lines.push(Array(9).fill(null).map((_, i) => [i, i])) // Top-left to bottom-right
+    lines.push(Array(9).fill(null).map((_, i) => [i, 8 - i])) // Top-right to bottom-left
+
+    // Parallel diagonals - top-left to bottom-right direction (14)
+    for (let startCol = 1; startCol < 9; startCol++) {
+      const line: number[][] = []
+      for (let i = 0; i < 9 - startCol; i++) {
+        line.push([i, startCol + i])
+      }
+      if (line.length >= 3) lines.push(line)
+    }
+    for (let startRow = 1; startRow < 9; startRow++) {
+      const line: number[][] = []
+      for (let i = 0; i < 9 - startRow; i++) {
+        line.push([startRow + i, i])
+      }
+      if (line.length >= 3) lines.push(line)
+    }
+
+    // Parallel diagonals - top-right to bottom-left direction (14)
+    for (let startCol = 0; startCol < 8; startCol++) {
+      const line: number[][] = []
+      for (let i = 0; i <= startCol && i < 9; i++) {
+        line.push([i, startCol - i])
+      }
+      if (line.length >= 3) lines.push(line)
+    }
+    for (let startRow = 1; startRow < 9; startRow++) {
+      const line: number[][] = []
+      for (let i = 0; startRow + i < 9 && 8 - i >= 0; i++) {
+        line.push([startRow + i, 8 - i])
+      }
+      if (line.length >= 3) lines.push(line)
+    }
+
+    // Additional winning patterns: 3x3 blocks (9), etc.
+    for (let blockRow = 0; blockRow < 3; blockRow++) {
+      for (let blockCol = 0; blockCol < 3; blockCol++) {
+        const block: number[][] = []
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 3; c++) {
+            block.push([blockRow * 3 + r, blockCol * 3 + c])
+          }
+        }
+        lines.push(block)
+      }
+    }
+
+    // Check each line for matches
+    lines.forEach(line => {
+      const symbols = line.map(([r, c]) => newGrid[r][c])
       const counts: Record<string, number> = {}
-      row.forEach(symbol => {
+      symbols.forEach(symbol => {
         counts[symbol] = (counts[symbol] || 0) + 1
       })
 
-      // Find best match
-      let bestMatch = 0
-      let winningSymbol = ""
+      // Find best match (3 or more of same symbol)
       Object.entries(counts).forEach(([symbol, count]) => {
-        if (count >= 3 && count > bestMatch) {
-          bestMatch = count
-          winningSymbol = symbol
+        if (count >= 3) {
+          const symbolValue = SYMBOL_VALUES[symbol] || 1
+          let multiplier = 1
+          if (count === 3) multiplier = 2
+          if (count === 4) multiplier = 5
+          if (count === 5) multiplier = 10
+          if (count >= 6) multiplier = 20
+          if (count >= 7) multiplier = 50
+          if (count >= 8) multiplier = 100
+          if (count === 9) {
+            multiplier = 500
+            hasJackpot = true
+          }
+
+          const lineWin = bet * multiplier * symbolValue
+          totalWin += lineWin
+
+          // Mark winning cells
+          line.forEach(([r, c]) => {
+            if (newGrid[r][c] === symbol) {
+              winCells.add(`${r}-${c}`)
+            }
+          })
         }
       })
-
-      // Calculate payout for this line
-      const payout = PAYOUTS.find(p => p.match === bestMatch)
-      if (payout) {
-        const symbolValue = SYMBOL_VALUES[winningSymbol] || 1
-        const lineWin = bet * payout.multiplier * symbolValue
-        totalWin += lineWin
-        winLines.push(lineIndex)
-        
-        if (bestMatch === 5) {
-          setJackpot(true)
-        }
-      }
     })
 
     if (totalWin > 0) {
       setLastWin(totalWin)
-      setWinningLines(winLines)
+      setWinningCells(winCells)
       setCoins(prev => prev + totalWin)
       setTotalWinnings(prev => prev + totalWin)
+      setJackpot(hasJackpot)
+      audioManager.playSound(hasJackpot ? 'win' : 'coin')
+    } else {
+      audioManager.playSound('lose')
     }
   }
 
   const adjustBet = (amount: number) => {
-    setBet(prev => Math.max(10, Math.min(100, prev + amount)))
+    const newBet = bet + amount
+    setBet(Math.max(10, Math.min(100, newBet)))
+    audioManager.playSound('click')
   }
 
   const resetGame = () => {
@@ -158,17 +236,22 @@ export default function MatromatPage() {
     }
     setCoins(1000)
     setBet(10)
-    setReels([
-      ["🍕", "🍺", "📚", "💤", "☕"],
-      ["🍕", "🍺", "📚", "💤", "☕"],
-      ["🍕", "🍺", "📚", "💤", "☕"],
-    ])
+    setGrid(Array(9).fill(null).map(() => Array(9).fill("💊")))
     setLastWin(0)
-    setWinningLines([])
+    setWinningCells(new Set())
     setJackpot(false)
     setTotalWinnings(0)
     setHighScore(0)
+    audioManager.playSound('click')
   }
+
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        clearTimeout(animationRef.current)
+      }
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -190,53 +273,72 @@ export default function MatromatPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-3xl">
+      <main className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Matromat</h1>
-          <p className="text-muted-foreground">Toč válce a vyhrávej!</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Matromat 9x9</h1>
+          <p className="text-muted-foreground">81 linií - Toč a vyhrávej!</p>
         </div>
 
         {/* Slot Machine */}
-        <Card className="mb-6 border-chart-4/30 bg-gradient-to-b from-card/80 to-card/50 backdrop-blur-sm overflow-hidden">
-          <div className="h-2 bg-gradient-to-r from-chart-4 via-primary to-accent" />
+        <Card className="mb-6 border-[#00ff00]/30 bg-gradient-to-b from-card/80 to-card/50 backdrop-blur-sm overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-[#00ff00] via-[#ff00ff] to-[#0088ff]" />
           
           <CardContent className="p-6">
             {/* Jackpot Display */}
             {jackpot && (
               <div className="mb-4 p-4 bg-[#00ff00]/20 rounded-xl border border-[#00ff00]/50 text-center animate-pulse">
                 <Sparkles className="h-8 w-8 text-[#00ff00] mx-auto mb-2" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
-                <p className="text-2xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>JACKPOT!</p>
+                <p className="text-2xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>JACKPOT! CELÁ MŘÍŽKA!</p>
               </div>
             )}
 
-            {/* Reels - 3 řádky x 5 válců */}
-            <div className="space-y-2 mb-6 p-4 bg-background/50 rounded-xl border border-border/50">
-              {reels.map((row, rowIndex) => (
-                <div key={rowIndex} className="flex justify-center gap-2">
-                  {row.map((symbol, colIndex) => (
-                    <div
-                      key={colIndex}
-                      className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center text-3xl md:text-4xl bg-secondary rounded-lg border-2 transition-all ${
-                        spinning
-                          ? "border-primary/50 animate-pulse"
-                          : winningLines.includes(rowIndex)
-                          ? "border-chart-4 bg-chart-4/20"
-                          : "border-border/50"
-                      }`}
-                    >
-                      {symbol}
-                    </div>
-                  ))}
+            {/* Progress Bar */}
+            {spinning && (
+              <div className="mb-4">
+                <div className="w-full bg-secondary/30 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#00ff00] to-[#ff00ff] transition-all duration-100"
+                    style={{ width: `${animationProgress}%` }}
+                  />
                 </div>
-              ))}
+              </div>
+            )}
+
+            {/* 9x9 Grid */}
+            <div className="mb-6 p-4 bg-background/50 rounded-xl border border-border/50 overflow-x-auto">
+              <div className="inline-block min-w-max">
+                {grid.map((row, rowIndex) => (
+                  <div key={rowIndex} className="flex gap-1 mb-1 last:mb-0">
+                    {row.map((symbol, colIndex) => {
+                      const cellKey = `${rowIndex}-${colIndex}`
+                      const isWinning = winningCells.has(cellKey)
+                      return (
+                        <div
+                          key={colIndex}
+                          className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-lg sm:text-xl bg-secondary rounded border transition-all ${
+                            spinning
+                              ? "border-primary/50 animate-pulse"
+                              : isWinning
+                              ? "border-[#00ff00] bg-[#00ff00]/20 scale-110"
+                              : "border-border/50"
+                          }`}
+                          style={isWinning ? { boxShadow: '0 0 10px #00ff00' } : {}}
+                        >
+                          {symbol}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Win Display */}
-            {lastWin > 0 && (
+            {lastWin > 0 && !spinning && (
               <div className="mb-4 text-center">
-                <p className="text-lg text-muted-foreground">Vyhrál jsi</p>
+                <p className="text-lg text-muted-foreground">Výhra!</p>
                 <p className="text-3xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>+{lastWin.toLocaleString()} mincí</p>
-                <p className="text-sm text-muted-foreground mt-1">{winningLines.length} vyhrávající {winningLines.length === 1 ? 'řádek' : 'řádky'}</p>
+                <p className="text-sm text-muted-foreground mt-1">{winningCells.size} vyhrávajících buněk</p>
               </div>
             )}
 
@@ -284,7 +386,7 @@ export default function MatromatPage() {
           </CardContent>
         </Card>
 
-        {/* Stats & Paytable */}
+        {/* Stats */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <Card className="border-border/50 bg-card/50">
             <CardContent className="p-4 text-center">
@@ -300,33 +402,35 @@ export default function MatromatPage() {
           </Card>
         </div>
 
-        {/* Paytable */}
-        <Card className="border-border/50 bg-card/30">
+        {/* Symbol Values */}
+        <Card className="border-border/50 bg-card/30 mb-6">
           <CardContent className="p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3">Výherní tabulka</h3>
-            <div className="space-y-2 text-sm">
-              {PAYOUTS.map((payout) => (
-                <div key={payout.match} className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{payout.name} ({payout.match} stejných v řádku)</span>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                    {payout.multiplier}x sázka
+            <h3 className="text-sm font-semibold text-foreground mb-3">Hodnoty symbolů</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+              {Object.entries(SYMBOL_NAMES).map(([symbol, name]) => (
+                <div key={symbol} className="flex items-center justify-between p-2 bg-secondary/30 rounded">
+                  <span className="text-xl">{symbol}</span>
+                  <span className="text-xs text-muted-foreground">{name}</span>
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs">
+                    {SYMBOL_VALUES[symbol]}x
                   </Badge>
                 </div>
               ))}
             </div>
             <div className="mt-3 pt-3 border-t border-border/50">
-              <p className="text-xs text-muted-foreground">* Můžeš vyhrát na více řádcích najednou!</p>
+              <p className="text-xs text-muted-foreground">* 3+ stejné symboly = výhra • 9 stejných = JACKPOT!</p>
+              <p className="text-xs text-muted-foreground">* 81 způsobů jak vyhrát: řádky, sloupce, diagonály, bloky 3x3 atd.</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Reset Button */}
         {coins === 0 && (
-          <Card className="mt-6 border-destructive/30 bg-destructive/5">
+          <Card className="border-destructive/30 bg-destructive/5">
             <CardContent className="p-6 text-center">
               <p className="text-lg font-semibold text-foreground mb-4">Došly ti mince!</p>
               {totalWinnings > 0 && user && (
-                <p className="text-success text-sm mb-4">Celkové výhry {totalWinnings} budou uloženy</p>
+                <p className="text-[#00ff00] text-sm mb-4">Celkové výhry {totalWinnings} budou uloženy</p>
               )}
               <Button onClick={resetGame} className="bg-primary hover:bg-primary/90 gap-2">
                 <RotateCcw className="h-4 w-4" />

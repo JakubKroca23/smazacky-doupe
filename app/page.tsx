@@ -54,13 +54,13 @@ export default function HomePage() {
       <ParticleBackground />
       
       {/* Hero Section with Title */}
-      <header className="relative text-center mb-10 z-10 mt-12">
-        <h1 className="text-6xl md:text-8xl font-bold text-center uppercase tracking-[0.5em] leading-[0.9] neon-text-pink animate-main-flicker my-2">
+      <header className="relative text-center mb-10 z-10 mt-8 px-4">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-center uppercase tracking-[0.2em] sm:tracking-[0.3em] md:tracking-[0.5em] leading-[0.9] neon-text-pink animate-main-flicker my-2 max-w-full overflow-hidden">
           SMAŽÁCKÝ
           <br />
           DOUPĚ
         </h1>
-        <div className="absolute top-[75px] right-[-80px] neon-text-green font-black text-2xl md:text-3xl uppercase tracking-[5px] rotate-[-12deg] z-[15] pointer-events-none whitespace-nowrap animate-slogan-vibe">
+        <div className="absolute top-[50px] sm:top-[60px] md:top-[75px] right-[-20px] sm:right-[-40px] md:right-[-80px] neon-text-green font-black text-sm sm:text-lg md:text-2xl lg:text-3xl uppercase tracking-[3px] sm:tracking-[5px] rotate-[-12deg] z-[15] pointer-events-none whitespace-nowrap animate-slogan-vibe">
           [ VŠE PRO TVŮJ DOJEZD ]
         </div>
       </header>

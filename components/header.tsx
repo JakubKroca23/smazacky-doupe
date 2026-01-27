@@ -12,15 +12,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut, Trophy, Gamepad2, Calendar, Menu, X } from "lucide-react"
+import { User, LogOut, Trophy, Gamepad2, Calendar, Menu, X, Volume2, VolumeX } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
+import { audioManager } from "@/lib/audio-manager"
 
 export function Header() {
   const pathname = usePathname()
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
   const supabase = createClient()
+
+  useEffect(() => {
+    // Load mute state from localStorage
+    const saved = localStorage.getItem('audio_muted')
+    setIsMuted(saved === 'true')
+  }, [])
 
   useEffect(() => {
     const getUser = async () => {
@@ -41,6 +49,13 @@ export function Header() {
     await supabase.auth.signOut()
     setUser(null)
     window.location.href = "/"
+  }
+
+  const toggleAudio = () => {
+    audioManager.toggleMute()
+    const newMuted = !isMuted
+    setIsMuted(newMuted)
+    audioManager.playSound('click')
   }
 
   const navItems = [
@@ -84,6 +99,17 @@ export function Header() {
 
         {/* Auth Section */}
         <div className="flex items-center gap-3">
+          {/* Audio Toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleAudio}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            aria-label={isMuted ? "Zapnout zvuk" : "Vypnout zvuk"}
+          >
+            {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
+          
           {loading ? (
             <div className="h-9 w-20 bg-secondary/50 rounded-lg animate-pulse" />
           ) : user ? (
