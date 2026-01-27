@@ -119,7 +119,7 @@ export default function ReactionGame() {
       case "go":
         return "bg-success"
       case "too-early":
-        return "bg-chart-4"
+        return "bg-[#ff00ff]"
       case "clicked":
         return "bg-primary"
       default:
@@ -158,8 +158,8 @@ export default function ReactionGame() {
   return (
     <div className="min-h-screen bg-background">
       {/* Background */}
-      <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
-      <div className="fixed top-20 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#00ff00]/5 via-background to-background -z-10" />
+      <div className="fixed top-20 right-1/4 w-96 h-96 bg-[#ff00ff]/10 rounded-full blur-3xl -z-10" />
 
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -173,8 +173,8 @@ export default function ReactionGame() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-chart-4" />
-            <span className="font-bold text-lg">Lightning Reflex</span>
+            <Zap className="h-5 w-5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
+            <span className="font-bold text-lg text-[#00ff00]" style={{ textShadow: '0 0 5px #00ff00' }}>Lightning Reflex</span>
           </div>
 
           <Button variant="ghost" size="sm" onClick={resetGame} className="gap-2">
@@ -188,13 +188,13 @@ export default function ReactionGame() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-wrap items-center justify-center gap-4">
           <Badge variant="outline" className="bg-secondary/50 gap-2 px-3 py-1.5">
-            <Target className="h-3.5 w-3.5 text-primary" />
-            Round {Math.min(round + 1, TOTAL_ROUNDS)}/{TOTAL_ROUNDS}
+            <Target className="h-3.5 w-3.5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
+            <span className="text-[#00ff00]">Round {Math.min(round + 1, TOTAL_ROUNDS)}/{TOTAL_ROUNDS}</span>
           </Badge>
           {averageTime && (
             <Badge variant="outline" className="bg-secondary/50 gap-2 px-3 py-1.5">
-              <Zap className="h-3.5 w-3.5 text-chart-4" />
-              Avg: {averageTime}ms
+              <Zap className="h-3.5 w-3.5 text-[#ff00ff]" style={{ filter: 'drop-shadow(0 0 5px #ff00ff)' }} />
+              <span className="text-[#ff00ff]">Avg: {averageTime}ms</span>
             </Badge>
           )}
           {highScore && (
@@ -241,10 +241,10 @@ export default function ReactionGame() {
                     variant="outline"
                     className={`${
                       time < 250
-                        ? "bg-success/20 text-success border-success/50"
+                        ? "bg-[#00ff00]/20 text-[#00ff00] border-[#00ff00]/50"
                         : time < 350
-                        ? "bg-chart-4/20 text-chart-4 border-chart-4/50"
-                        : "bg-destructive/20 text-destructive border-destructive/50"
+                        ? "bg-[#ff00ff]/20 text-[#ff00ff] border-[#ff00ff]/50"
+                        : "bg-[#ff0055]/20 text-[#ff0055] border-[#ff0055]/50"
                     }`}
                   >
                     {time}ms
@@ -261,14 +261,14 @@ export default function ReactionGame() {
             <Card className="w-full max-w-sm border-primary/50 bg-card">
               <CardContent className="p-6 text-center space-y-4">
                 <div className="relative inline-block">
-                  <Zap className="h-16 w-16 text-chart-4 mx-auto" />
-                  <div className="absolute inset-0 blur-lg bg-chart-4/30 -z-10" />
+                  <Zap className="h-16 w-16 text-[#00ff00] mx-auto" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
+                  <div className="absolute inset-0 blur-lg bg-[#00ff00]/30 -z-10" />
                 </div>
                 <h2 className="text-2xl font-bold">Game Complete!</h2>
                 <p className="text-muted-foreground">
                   Average reaction time: {averageTime}ms
                 </p>
-                <div className="text-3xl font-bold text-primary neon-text">
+                <div className="text-3xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>
                   Score: {currentScore.toLocaleString()}
                 </div>
                 <div className="flex gap-3 pt-4">

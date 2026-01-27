@@ -167,7 +167,7 @@ export default function CoNaToSmazkyPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="fixed inset-0 bg-gradient-to-b from-accent/5 via-background to-background -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#ff00ff]/5 via-background to-background -z-10" />
 
       <header className="p-4 border-b border-border/50">
         <div className="container mx-auto flex items-center justify-between">
@@ -182,8 +182,8 @@ export default function CoNaToSmazkyPage() {
               ))}
             </Badge>
             <div className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-chart-4" />
-              <span className="font-bold text-chart-4">{score}</span>
+              <Trophy className="h-5 w-5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
+              <span className="font-bold text-[#00ff00]" style={{ textShadow: '0 0 5px #00ff00' }}>{score}</span>
             </div>
           </div>
         </div>
@@ -295,11 +295,11 @@ export default function CoNaToSmazkyPage() {
             </div>
           </>
         ) : (
-          <Card className="border-chart-4/50 bg-gradient-to-r from-chart-4/10 to-chart-4/5">
+          <Card className="border-[#00ff00]/50 bg-gradient-to-r from-[#00ff00]/10 to-[#00ff00]/5">
             <CardContent className="p-8 text-center">
-              <Trophy className="h-16 w-16 text-chart-4 mx-auto mb-4" />
+              <Trophy className="h-16 w-16 text-[#00ff00] mx-auto mb-4" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
               <h2 className="text-3xl font-bold text-foreground mb-2">Hra Dokončena!</h2>
-              <p className="text-5xl font-bold text-chart-4 neon-text mb-6">{score} bodů</p>
+              <p className="text-5xl font-bold text-[#00ff00] mb-6" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>{score} bodů</p>
               {user ? (
                 <p className="text-success text-sm mb-6">Skóre uloženo!</p>
               ) : (

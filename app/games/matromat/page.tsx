@@ -172,8 +172,8 @@ export default function MatromatPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="fixed inset-0 bg-gradient-to-b from-chart-4/5 via-background to-background -z-10" />
-      <div className="fixed top-40 left-1/4 w-96 h-96 bg-chart-4/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#00ff00]/5 via-background to-background -z-10" />
+      <div className="fixed top-40 left-1/4 w-96 h-96 bg-[#00ff00]/10 rounded-full blur-3xl -z-10" />
 
       <header className="p-4 border-b border-border/50">
         <div className="container mx-auto flex items-center justify-between">
@@ -183,8 +183,8 @@ export default function MatromatPage() {
           </Link>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Coins className="h-5 w-5 text-chart-4" />
-              <span className="font-bold text-chart-4">{coins.toLocaleString()}</span>
+              <Coins className="h-5 w-5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
+              <span className="font-bold text-[#00ff00]" style={{ textShadow: '0 0 5px #00ff00' }}>{coins.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -203,9 +203,9 @@ export default function MatromatPage() {
           <CardContent className="p-6">
             {/* Jackpot Display */}
             {jackpot && (
-              <div className="mb-4 p-4 bg-chart-4/20 rounded-xl border border-chart-4/50 text-center animate-pulse">
-                <Sparkles className="h-8 w-8 text-chart-4 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-chart-4 neon-text">JACKPOT!</p>
+              <div className="mb-4 p-4 bg-[#00ff00]/20 rounded-xl border border-[#00ff00]/50 text-center animate-pulse">
+                <Sparkles className="h-8 w-8 text-[#00ff00] mx-auto mb-2" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
+                <p className="text-2xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>JACKPOT!</p>
               </div>
             )}
 
@@ -235,7 +235,7 @@ export default function MatromatPage() {
             {lastWin > 0 && (
               <div className="mb-4 text-center">
                 <p className="text-lg text-muted-foreground">Vyhrál jsi</p>
-                <p className="text-3xl font-bold text-chart-4 neon-text">+{lastWin.toLocaleString()} mincí</p>
+                <p className="text-3xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>+{lastWin.toLocaleString()} mincí</p>
                 <p className="text-sm text-muted-foreground mt-1">{winningLines.length} vyhrávající {winningLines.length === 1 ? 'řádek' : 'řádky'}</p>
               </div>
             )}
@@ -270,7 +270,8 @@ export default function MatromatPage() {
             <Button
               onClick={spin}
               disabled={coins < bet || spinning}
-              className="w-full h-14 text-xl bg-gradient-to-r from-chart-4 to-primary hover:from-chart-4/90 hover:to-primary/90 neon-glow"
+              className="w-full h-14 text-xl bg-gradient-to-r from-[#00ff00] to-[#ff00ff] hover:from-[#00ff00]/90 hover:to-[#ff00ff]/90 text-black font-bold"
+              style={{ boxShadow: '0 0 20px #00ff00, 0 0 40px #ff00ff' }}
             >
               {spinning ? "Točí se..." : coins < bet ? "Nedostatek mincí" : "ZATOČIT!"}
             </Button>
@@ -288,13 +289,13 @@ export default function MatromatPage() {
           <Card className="border-border/50 bg-card/50">
             <CardContent className="p-4 text-center">
               <p className="text-xs text-muted-foreground mb-1">Celkové výhry</p>
-              <p className="text-lg font-bold text-success">+{totalWinnings.toLocaleString()}</p>
+              <p className="text-lg font-bold text-[#00ff00]" style={{ textShadow: '0 0 5px #00ff00' }}>+{totalWinnings.toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card className="border-border/50 bg-card/50">
             <CardContent className="p-4 text-center">
               <p className="text-xs text-muted-foreground mb-1">Rekord mincí</p>
-              <p className="text-lg font-bold text-chart-4">{highScore.toLocaleString()}</p>
+              <p className="text-lg font-bold text-[#ff00ff]" style={{ textShadow: '0 0 5px #ff00ff' }}>{highScore.toLocaleString()}</p>
             </CardContent>
           </Card>
         </div>

@@ -578,12 +578,12 @@ export default function KostkyPage() {
   if (mode === 'menu') {
     return (
       <div className="min-h-screen bg-background pt-12">
-        <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
+        <div className="fixed inset-0 bg-gradient-to-b from-[#00ff00]/5 via-background to-background -z-10" />
 
         <main className="container mx-auto px-4 py-8 max-w-2xl">
           <div className="text-center mb-12">
-            <Dices className="h-16 w-16 text-primary mx-auto mb-4" />
-            <h1 className="text-4xl font-bold text-foreground mb-4">Smažácký Kostky</h1>
+            <Dices className="h-16 w-16 text-[#00ff00] mx-auto mb-4" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
+            <h1 className="text-4xl font-bold text-[#00ff00] mb-4" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>Smažácký Kostky</h1>
             <p className="text-muted-foreground">Vyber herní režim</p>
           </div>
 
@@ -618,7 +618,8 @@ export default function KostkyPage() {
                   <div className="space-y-3">
                     <Button
                       onClick={createOnlineGame}
-                      className="w-full bg-chart-4 hover:bg-chart-4/90"
+                      className="w-full bg-[#ff00ff] hover:bg-[#ff00ff]/90 text-white"
+                      style={{ boxShadow: '0 0 10px #ff00ff' }}
                     >
                       Vytvořit hru
                     </Button>

@@ -43,9 +43,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Background effects */}
-      <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
-      <div className="fixed top-20 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl -z-10" />
-      <div className="fixed bottom-20 right-1/4 w-64 h-64 bg-accent/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#00ff00]/5 via-background to-background -z-10" />
+      <div className="fixed top-20 left-1/4 w-96 h-96 bg-[#00ff00]/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed bottom-20 right-1/4 w-64 h-64 bg-[#ff00ff]/10 rounded-full blur-3xl -z-10" />
 
       {/* Header */}
       <header className="p-4">
@@ -64,8 +64,8 @@ export default function LoginPage() {
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="relative">
-                <Gamepad2 className="h-12 w-12 text-primary neon-text" />
-                <div className="absolute inset-0 blur-lg bg-primary/30 -z-10" />
+                <Gamepad2 className="h-12 w-12 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
+                <div className="absolute inset-0 blur-lg bg-[#00ff00]/30 -z-10" />
               </div>
             </div>
             <CardTitle className="text-2xl font-bold">

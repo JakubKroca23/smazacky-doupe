@@ -206,8 +206,8 @@ export default function SnakeGame() {
   return (
     <div className="min-h-screen bg-background">
       {/* Background */}
-      <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
-      <div className="fixed top-20 left-1/3 w-96 h-96 bg-success/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#00ff00]/5 via-background to-background -z-10" />
+      <div className="fixed top-20 left-1/3 w-96 h-96 bg-[#00ff00]/10 rounded-full blur-3xl -z-10" />
 
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -221,8 +221,8 @@ export default function SnakeGame() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-success" />
-            <span className="font-bold text-lg">Cyber Snake</span>
+            <Target className="h-5 w-5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
+            <span className="font-bold text-lg text-[#00ff00]" style={{ textShadow: '0 0 5px #00ff00' }}>Cyber Snake</span>
           </div>
 
           <Button variant="ghost" size="sm" onClick={startGame} className="gap-2">
@@ -236,8 +236,8 @@ export default function SnakeGame() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-wrap items-center justify-center gap-4">
           <Badge variant="outline" className="bg-secondary/50 gap-2 px-3 py-1.5">
-            <Target className="h-3.5 w-3.5 text-success" />
-            Score: {score}
+            <Target className="h-3.5 w-3.5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
+            <span className="text-[#00ff00]">Score: {score}</span>
           </Badge>
           <Badge variant="outline" className="bg-secondary/50 gap-2 px-3 py-1.5">
             Length: {snake.length}
@@ -279,9 +279,7 @@ export default function SnakeGame() {
               <div
                 key={index}
                 className={`absolute rounded-sm transition-all duration-75 ${
-                  index === 0
-                    ? "bg-primary neon-glow z-10"
-                    : "bg-primary/70"
+                  index === 0 ? "bg-[#00ff00] z-10" : "bg-primary/70"
                 }`}
                 style={{
                   left: segment.x * CELL_SIZE + 2,

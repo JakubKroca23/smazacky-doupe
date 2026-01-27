@@ -56,8 +56,8 @@ export default async function ProfilePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Background */}
-      <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
-      <div className="fixed top-40 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#00ff00]/5 via-background to-background -z-10" />
+      <div className="fixed top-40 right-1/4 w-96 h-96 bg-[#ff00ff]/10 rounded-full blur-3xl -z-10" />
 
       <main className="container mx-auto px-4 py-8">
         {/* Profile Header */}
@@ -67,10 +67,10 @@ export default async function ProfilePage() {
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 {/* Avatar */}
                 <div className="relative">
-                  <div className="w-24 h-24 rounded-full bg-primary/20 border-2 border-primary/50 flex items-center justify-center">
-                    <User className="h-12 w-12 text-primary" />
+                  <div className="w-24 h-24 rounded-full bg-[#00ff00]/20 border-2 border-[#00ff00]/50 flex items-center justify-center">
+                    <User className="h-12 w-12 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
                   </div>
-                  <div className="absolute -inset-2 bg-primary/20 rounded-full blur-xl -z-10" />
+                  <div className="absolute -inset-2 bg-[#00ff00]/20 rounded-full blur-xl -z-10" />
                 </div>
 
                 {/* Info */}
@@ -85,7 +85,7 @@ export default async function ProfilePage() {
                       Členem od {memberSince}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Trophy className="h-4 w-4 text-chart-4" />
+                      <Trophy className="h-4 w-4 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
                       {totalGames} odehraných her
                     </div>
                   </div>
@@ -106,7 +106,7 @@ export default async function ProfilePage() {
           <Card className="border-border/50 bg-card/50 backdrop-blur-sm mt-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-chart-4" />
+                <Trophy className="h-5 w-5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
                 Nejlepší Skóre
               </CardTitle>
             </CardHeader>

@@ -113,9 +113,26 @@ export default function PernikarPage() {
   const [audienceVotes, setAudienceVotes] = useState<number[] | null>(null)
   const supabase = createClient()
 
+  // Ensure all hooks are called at the top level
+  const [isFiftyFiftyUsed, setIsFiftyFiftyUsed] = useState(false)
+  const [isPhoneUsed, setIsPhoneUsed] = useState(false)
+  const [isAudienceUsed, setIsAudienceUsed] = useState(false)
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
   }, [supabase.auth])
+
+  useEffect(() => {
+    useFiftyFifty()
+  }, [isFiftyFiftyUsed])
+
+  useEffect(() => {
+    usePhone()
+  }, [isPhoneUsed])
+
+  useEffect(() => {
+    useAudience()
+  }, [isAudienceUsed])
 
   const saveScore = async (score: number) => {
     if (!user) return
@@ -166,7 +183,7 @@ export default function PernikarPage() {
   }
 
   const useFiftyFifty = () => {
-    if (!lifelines.fifty) return
+    if (!lifelines.fifty || !isFiftyFiftyUsed) return
     setLifelines(prev => ({ ...prev, fifty: false }))
     
     const wrongOptions = question.options
@@ -175,10 +192,11 @@ export default function PernikarPage() {
     
     const toHide = wrongOptions.sort(() => Math.random() - 0.5).slice(0, 2)
     setHiddenOptions(toHide)
+    setIsFiftyFiftyUsed(false)
   }
 
   const usePhone = () => {
-    if (!lifelines.phone) return
+    if (!lifelines.phone || !isPhoneUsed) return
     setLifelines(prev => ({ ...prev, phone: false }))
     
     const hints = [
@@ -187,10 +205,11 @@ export default function PernikarPage() {
       `Hmm, myslím že ${question.options[question.correct]}... nebo ne? Nevím, jsem zfetovanej.`,
     ]
     setPhoneHint(hints[Math.floor(Math.random() * hints.length)])
+    setIsPhoneUsed(false)
   }
 
   const useAudience = () => {
-    if (!lifelines.audience) return
+    if (!lifelines.audience || !isAudienceUsed) return
     setLifelines(prev => ({ ...prev, audience: false }))
     
     const votes = question.options.map((_, i) => {
@@ -199,6 +218,7 @@ export default function PernikarPage() {
     })
     const total = votes.reduce((a, b) => a + b, 0)
     setAudienceVotes(votes.map(v => Math.round((v / total) * 100)))
+    setIsAudienceUsed(false)
   }
 
   const resetGame = () => {
@@ -221,41 +241,15 @@ export default function PernikarPage() {
   }
 
   const handleLifelineClick = (key: keyof typeof LIFELINES) => {
-    if (key === "fifty") useFiftyFifty()
-    if (key === "phone") usePhone()
-    if (key === "audience") useAudience()
+    if (key === "fifty") setIsFiftyFiftyUsed(true)
+    if (key === "phone") setIsPhoneUsed(true)
+    if (key === "audience") setIsAudienceUsed(true)
   }
-
-  // Ensure all hooks are called at the top level
-  const [isFiftyFiftyUsed, setIsFiftyFiftyUsed] = useState(false)
-  const [isPhoneUsed, setIsPhoneUsed] = useState(false)
-  const [isAudienceUsed, setIsAudienceUsed] = useState(false)
-
-  useEffect(() => {
-    if (isFiftyFiftyUsed) {
-      useFiftyFifty()
-      setIsFiftyFiftyUsed(false)
-    }
-  }, [isFiftyFiftyUsed])
-
-  useEffect(() => {
-    if (isPhoneUsed) {
-      usePhone()
-      setIsPhoneUsed(false)
-    }
-  }, [isPhoneUsed])
-
-  useEffect(() => {
-    if (isAudienceUsed) {
-      useAudience()
-      setIsAudienceUsed(false)
-    }
-  }, [isAudienceUsed])
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
-      <div className="fixed top-40 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#00ff00]/5 via-background to-background -z-10" />
+      <div className="fixed top-40 right-1/4 w-96 h-96 bg-[#ff00ff]/10 rounded-full blur-3xl -z-10" />
 
       <header className="p-4 border-b border-border/50">
         <div className="container mx-auto flex items-center justify-between">
@@ -264,8 +258,8 @@ export default function PernikarPage() {
             Zpět
           </Link>
           <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-chart-4" />
-            <span className="font-bold text-chart-4">{currentPrize.toLocaleString()} perníků</span>
+            <Trophy className="h-5 w-5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
+            <span className="font-bold text-[#00ff00]" style={{ textShadow: '0 0 5px #00ff00' }}>{currentPrize.toLocaleString()} perníků</span>
           </div>
         </div>
       </header>
@@ -398,11 +392,7 @@ export default function PernikarPage() {
                     variant="outline"
                     size="sm"
                     disabled={!available || isAnswerLocked}
-                    onClick={() => {
-                      if (key === "fifty") setIsFiftyFiftyUsed(true)
-                      if (key === "phone") setIsPhoneUsed(true)
-                      if (key === "audience") setIsAudienceUsed(true)
-                    }}
+                    onClick={() => handleLifelineClick(key as keyof typeof LIFELINES)}
                     className={`gap-2 bg-transparent ${available ? "border-accent/50 hover:bg-accent/10" : "opacity-30"}`}
                   >
                     <Icon className="h-4 w-4" />
@@ -418,7 +408,7 @@ export default function PernikarPage() {
               {won ? (
                 <>
                   <Sparkles className="h-16 w-16 text-chart-4 mx-auto mb-4" />
-                  <h2 className="text-3xl font-bold text-foreground mb-2">VYHRÁVÁŠ!</h2>
+                  <h2 className="text-3xl font-bold text-foreground mb-2">VYHRÁVŠE!</h2>
                   <p className="text-5xl font-bold text-chart-4 neon-text mb-2">1,000,000</p>
                   <p className="text-xl text-chart-4 mb-6">perníků!</p>
                   <p className="text-muted-foreground mb-4">Jsi pravá ostravská smažka!</p>

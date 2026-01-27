@@ -81,16 +81,16 @@ export default async function LeaderboardPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
-      <div className="fixed top-40 left-1/4 w-96 h-96 bg-chart-4/10 rounded-full blur-3xl -z-10" />
-      <div className="fixed bottom-20 right-1/4 w-64 h-64 bg-primary/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#00ff00]/5 via-background to-background -z-10" />
+      <div className="fixed top-40 left-1/4 w-96 h-96 bg-[#00ff00]/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed bottom-20 right-1/4 w-64 h-64 bg-[#ff00ff]/10 rounded-full blur-3xl -z-10" />
 
       <main className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <div className="relative">
-              <Trophy className="h-12 w-12 text-chart-4" />
-              <div className="absolute inset-0 blur-lg bg-chart-4/30 -z-10" />
+              <Trophy className="h-12 w-12 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
+              <div className="absolute inset-0 blur-lg bg-[#00ff00]/30 -z-10" />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Žebříček</h1>
@@ -112,21 +112,21 @@ export default async function LeaderboardPage({
                   key={`${entry.userId}-${entry.gameId}-${index}`}
                   className={`flex items-center gap-4 p-4 rounded-xl transition-all ${
                     index === 0
-                      ? "bg-gradient-to-r from-chart-4/20 to-chart-4/5 border border-chart-4/30"
+                      ? "bg-gradient-to-r from-[#00ff00]/20 to-[#00ff00]/5 border border-[#00ff00]/30"
                       : index === 1
-                      ? "bg-gradient-to-r from-secondary/50 to-secondary/20 border border-secondary/50"
+                      ? "bg-gradient-to-r from-[#ff00ff]/20 to-[#ff00ff]/5 border border-[#ff00ff]/30"
                       : index === 2
-                      ? "bg-gradient-to-r from-chart-5/20 to-chart-5/5 border border-chart-5/30"
+                      ? "bg-gradient-to-r from-[#0088ff]/20 to-[#0088ff]/5 border border-[#0088ff]/30"
                       : "bg-card/30 border border-border/50"
                   }`}
                 >
                   <div className="flex items-center justify-center w-10 h-10">
                     {index === 0 ? (
-                      <Crown className="h-6 w-6 text-chart-4" />
+                      <Crown className="h-6 w-6 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
                     ) : index === 1 ? (
-                      <Medal className="h-6 w-6 text-secondary-foreground" />
+                      <Medal className="h-6 w-6 text-[#ff00ff]" style={{ filter: 'drop-shadow(0 0 5px #ff00ff)' }} />
                     ) : index === 2 ? (
-                      <Medal className="h-6 w-6 text-chart-5" />
+                      <Medal className="h-6 w-6 text-[#0088ff]" style={{ filter: 'drop-shadow(0 0 5px #0088ff)' }} />
                     ) : (
                       <span className="text-lg font-bold text-muted-foreground">
                         {index + 1}
@@ -151,8 +151,8 @@ export default async function LeaderboardPage({
 
                   <div className="text-right">
                     <p className={`text-lg font-bold ${
-                      index === 0 ? "text-chart-4 neon-text" : "text-foreground"
-                    }`}>
+                      index === 0 ? "text-[#00ff00]" : index === 1 ? "text-[#ff00ff]" : index === 2 ? "text-[#0088ff]" : "text-foreground"
+                    }`} style={index < 3 ? { textShadow: `0 0 10px ${index === 0 ? '#00ff00' : index === 1 ? '#ff00ff' : '#0088ff'}` } : {}}>
                       {entry.score.toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">bodů</p>
