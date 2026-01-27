@@ -60,7 +60,6 @@ export function Header() {
 
   const navItems = [
     { href: "/", label: "Hry", icon: Gamepad2 },
-    { href: "/leaderboard", label: "Žebříček", icon: Trophy },
   ]
 
   return (
@@ -131,12 +130,6 @@ export function Header() {
                   <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
                     <User className="h-4 w-4" />
                     Profil
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/leaderboard" className="flex items-center gap-2 cursor-pointer">
-                    <Trophy className="h-4 w-4" />
-                    Moje Skóre
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
