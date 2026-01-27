@@ -273,10 +273,14 @@ export default function MatromatPage() {
   }
 
   const handleReset = async () => {
-    const { balance } = await resetSmaze()
+    console.log('[v0] Resetting SMAŽE...')
+    const { balance, error } = await resetSmaze()
+    console.log('[v0] Reset result - balance:', balance, 'error:', error)
     setSmaze(balance)
     setBet(10)
-    setGrid(Array(9).fill(null).map(() => Array(9).fill('💊')))
+    setGrid(Array(9).fill(null).map(() => 
+      Array(9).fill(null).map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)])
+    ))
     setLastWin(0)
     setWinningCells(new Set())
     setJackpot(false)
