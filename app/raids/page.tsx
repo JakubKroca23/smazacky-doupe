@@ -212,10 +212,12 @@ export default function RaidsPage() {
     if (!activeRaid || !enemies[currentEnemyIndex]) return
 
     const currentEnemy = enemies[currentEnemyIndex]
-    console.log('[v0] Attacking enemy:', currentEnemy.name, 'HP:', currentEnemy.hp)
+    console.log('[v0] Attacking enemy:', currentEnemy.name, 'HP:', currentEnemy.hp, 'Player level:', playerStats?.level)
     
     // Player attacks
-    const playerDamage = Math.floor(Math.random() * 20) + 10 + (playerStats.level * 2)
+    const playerLevel = playerStats?.level || 1
+    const playerDamage = Math.floor(Math.random() * 20) + 10 + (playerLevel * 2)
+    console.log('[v0] Player damage calculated:', playerDamage, 'Level:', playerLevel)
     const newEnemyHp = Math.max(0, currentEnemy.hp - playerDamage)
     
     const newEnemies = [...enemies]
