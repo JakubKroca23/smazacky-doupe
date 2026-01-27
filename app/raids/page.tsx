@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Skull, Target, Clock, Zap, Trophy, Star, AlertTriangle, Lock, Check } from "lucide-react"
 import { audioManager } from "@/lib/audio-manager"
+import { saveRaidCompletion } from "@/app/actions/raids"
 
 type RaidDefinition = {
   id: string
@@ -182,6 +183,7 @@ export default function RaidsPage() {
     if (!activeRaid) return
 
     const raid = activeRaid.raid
+    const completionTime = Math.round((Date.now() - activeRaid.startTime) / 1000)
     
     // Calculate success based on luck
     const successRoll = Math.random() * 100
@@ -224,6 +226,20 @@ export default function RaidsPage() {
           })
       }
 
+      // Save raid statistics
+      await saveRaidCompletion({
+        raidType: raid.id,
+        success: true,
+        timeSeconds: completionTime,
+        xpEarned: raid.rewards.xp,
+        currencyEarned: raid.rewards.currency,
+        itemsEarned: droppedItems.map(item => ({
+          name: item.name,
+          icon: item.name,
+          quantity: 1
+        }))
+      })
+
       setPlayerStats({ ...playerStats, xp: newXP, currency: newCurrency })
 
       alert(`Raid úspěšný!
@@ -232,6 +248,17 @@ export default function RaidsPage() {
 ${droppedItems.length > 0 ? `Zisk: ${droppedItems.map(i => i.name).join(", ")}` : "Žádné předměty"}`)
     } else {
       audioManager.playSound('lose')
+      
+      // Save failed raid statistics
+      await saveRaidCompletion({
+        raidType: raid.id,
+        success: false,
+        timeSeconds: completionTime,
+        xpEarned: 0,
+        currencyEarned: 0,
+        itemsEarned: []
+      })
+      
       alert("Raid selhal! Zkus to znovu.")
     }
 
