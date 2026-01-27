@@ -53,9 +53,10 @@ export function Header() {
       <div className="container mx-auto flex h-12 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <Gamepad2 className="h-6 w-6 text-primary transition-all group-hover:scale-110" />
-          <span className="text-base font-bold tracking-wider text-foreground hidden sm:block">
-            SMAŽÁCKÝ<span className="text-primary"> DOUPĚ</span>
+          <Gamepad2 className="h-6 w-6 text-[#00ff00] transition-all group-hover:scale-110" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
+          <span className="text-base font-bold tracking-wider hidden sm:block">
+            <span className="text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>SMAŽÁCKÝ</span>
+            <span className="text-[#ff00ff]" style={{ textShadow: '0 0 10px #ff00ff, 0 0 20px #ff00ff' }}> DOUPĚ</span>
           </span>
         </Link>
 
