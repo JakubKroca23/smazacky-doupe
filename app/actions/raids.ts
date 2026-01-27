@@ -30,7 +30,7 @@ export async function saveRaidCompletion({
     .from('raid_stats')
     .select('*')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   const newStats = {
     user_id: user.id,
@@ -61,14 +61,14 @@ export async function saveRaidCompletion({
     .from('player_stats')
     .select('*')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (playerStats) {
     await supabase
       .from('player_stats')
       .update({
-        xp: playerStats.xp + xpEarned,
-        currency: playerStats.currency + currencyEarned,
+        xp: (playerStats.xp || 0) + xpEarned,
+        currency: (playerStats.currency || 0) + currencyEarned,
       })
       .eq('user_id', user.id)
   }
