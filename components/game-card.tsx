@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client"
 interface GameCardProps {
   id: string
   title: string
-  description: string
   icon: "dice" | "users" | "slot" | "trophy"
   difficulty: "Lehká" | "Střední" | "Těžká"
   badge?: string
@@ -33,7 +32,6 @@ const hoverColorMap = {
 export function GameCard({
   id,
   title,
-  description,
   difficulty,
   badge,
   badgeColor = "blue",
@@ -70,37 +68,41 @@ export function GameCard({
   return (
     <Link href={`/games/${id}`}>
       <div
-        className={`glass-effect border-2 border-[#222] rounded-[15px] p-8 text-center text-white transition-all duration-300 cursor-pointer relative flex flex-col hover:translate-y-[-10px] ${hoverColorMap[hoverColor]}`}
+        className={`glass-effect border-2 border-[#222] rounded-[20px] p-10 text-center text-white transition-all duration-300 cursor-pointer relative flex flex-col items-center justify-center h-96 group hover:translate-y-[-15px] ${hoverColorMap[hoverColor]}`}
       >
-        {/* Badge like "NASYPANÁ NOVINKA" */}
-        {badge && badge === "NASYPANÁ NOVINKA" && (
-          <div className="absolute top-[-15px] right-[-25px] bg-[#00ff00] text-black px-8 py-2 text-lg font-black rotate-[15deg] shadow-[0_0_20px_#00ff00] z-[100] animate-flash-green">
-            {badge}
-          </div>
-        )}
+        {/* Animated background glow */}
+        <div className="absolute inset-0 rounded-[20px] bg-gradient-to-br from-[#ff00ff]/5 via-transparent to-[#0088ff]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         
-        {/* Regular badge (top left) */}
-        {badge && badge !== "NASYPANÁ NOVINKA" && (
-          <div className={`absolute top-[15px] left-[15px] ${badgeColorMap[badgeColor]} px-2 py-0.5 text-[0.6em] font-bold rounded-[10px]`}>
+        {/* Badge - NASYPÁNA NOVINKA */}
+        {badge === "NASYPÁNA NOVINKA" && (
+          <div className="absolute top-[-12px] right-[-20px] bg-gradient-to-r from-[#00ff00] to-[#00dd00] text-black px-6 py-2 text-xs font-black rotate-[12deg] shadow-[0_0_30px_rgba(0,255,0,0.8)] z-[100] animate-pulse rounded-full uppercase tracking-wider">
             {badge}
           </div>
         )}
 
-        {/* Emoji Icon */}
-        <div className="text-6xl mb-2">{emoji}</div>
-
-        {/* Title */}
-        <div className="text-xl font-bold uppercase mb-2">{title}</div>
-
-        {/* Description */}
-        <div className="text-sm text-muted-foreground mb-4 flex-grow">
-          {description}
+        {/* Main Icon - Large and Glowing */}
+        <div className="text-8xl mb-6 animate-bounce group-hover:scale-110 transition-transform duration-300" style={{ textShadow: '0 0 30px rgba(255, 0, 255, 0.6)' }}>
+          {emoji}
         </div>
 
-        {/* Players online */}
-        <div className="text-xs text-muted-foreground">
-          👥 {playersOnline} hráčů online
+        {/* Title - Premium styling */}
+        <div className="text-3xl font-black uppercase mb-8 tracking-widest group-hover:text-[#00ff00] transition-colors duration-300" style={{ textShadow: '0 0 20px rgba(0, 255, 0, 0.3)' }}>
+          {title}
         </div>
+
+        {/* Difficulty badge - Subtle */}
+        <div className="inline-block px-4 py-2 bg-[#222]/80 text-xs font-bold uppercase tracking-[2px] rounded-full mb-6 text-[#00ff00]">
+          ▶ {difficulty} ◀
+        </div>
+
+        {/* Players online indicator */}
+        <div className="mt-auto flex items-center gap-2 text-sm text-[#0088ff] font-bold">
+          <div className="w-2 h-2 bg-[#00ff00] rounded-full animate-pulse" />
+          <span>{playersOnline} HRÁČŮ ONLINE</span>
+        </div>
+
+        {/* Bottom accent line */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-gradient-to-r from-transparent via-[#00ff00] to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
       </div>
     </Link>
   )

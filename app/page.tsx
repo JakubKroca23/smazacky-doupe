@@ -5,10 +5,9 @@ const games = [
   {
     id: "kostky",
     title: "Smažácký Kostky",
-    description: "Hoď kostkami a zkus svůj smažácký štěstí! Sbírej body za kombinace a staň se králem kostek.",
     icon: "dice" as const,
     difficulty: "Lehká" as const,
-    badge: "JEDINÁ HRA",
+    badge: "NASYPÁNA NOVINKA",
     badgeColor: "green" as const,
     emoji: "🎲",
     hoverColor: "blue" as const,
