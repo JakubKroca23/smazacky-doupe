@@ -1,91 +1,164 @@
-"use client"
+'use client'
 
-import { useState, useEffect, useRef } from "react"
-import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Coins, RotateCcw, Sparkles, Plus, Minus } from "lucide-react"
-import { audioManager } from "@/lib/audio-manager"
-import type { User } from "@supabase/supabase-js"
+import { useState, useEffect, useRef, Suspense } from 'react'
+import Link from 'next/link'
+import { Canvas } from '@react-three/fiber'
+import { OrbitControls, Environment, PerspectiveCamera } from '@react-three/drei'
+import { createClient } from '@/lib/supabase/client'
+import { getSmazeBalance, updateSmaze, resetSmaze } from '@/app/actions/currency'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { ArrowLeft, Coins, RotateCcw, Sparkles, Plus, Minus, Loader2 } from 'lucide-react'
+import { audioManager } from '@/lib/audio-manager'
+import { SlotReel3D } from '@/components/slot-reel-3d'
+import type { User } from '@supabase/supabase-js'
 
-// New drug-themed symbols
-const SYMBOLS = ["💊", "💉", "🧪", "⚗️", "💎", "🌿", "❄️"]
+const SYMBOLS = ['💊', '💉', '🧪', '⚗️', '💎', '🌿', '❄️']
+
 const SYMBOL_NAMES: Record<string, string> = {
-  "💊": "MATRA",
-  "💉": "DROG",
-  "🧪": "PERVITIN",
-  "⚗️": "CHEMIE",
-  "💎": "KRYSTAL",
-  "🌿": "TRÁVA",
-  "❄️": "SNÍH",
+  '💊': 'MATRA',
+  '💉': 'DROG',
+  '🧪': 'PERVITIN',
+  '⚗️': 'CHEMIE',
+  '💎': 'KRYSTAL',
+  '🌿': 'TRÁVA',
+  '❄️': 'SNÍH',
 }
 
 const SYMBOL_VALUES: Record<string, number> = {
-  "💊": 2,
-  "💉": 5,
-  "🧪": 10,
-  "⚗️": 3,
-  "💎": 15,
-  "🌿": 1,
-  "❄️": 8,
+  '💊': 2,
+  '💉': 5,
+  '🧪': 10,
+  '⚗️': 3,
+  '💎': 15,
+  '🌿': 1,
+  '❄️': 8,
 }
 
-// 9x9 grid = 81 lines total
-// Lines: 9 horizontal + 9 vertical + 18 diagonal (9+9) + many other patterns
 type Grid = string[][]
+
+function SlotMachine3D({ 
+  grid, 
+  spinning, 
+  winningCells 
+}: { 
+  grid: Grid
+  spinning: boolean
+  winningCells: Set<string>
+}) {
+  return (
+    <>
+      <PerspectiveCamera makeDefault position={[0, 0, 20]} fov={50} />
+      <OrbitControls 
+        enableZoom={false}
+        enablePan={false}
+        minPolarAngle={Math.PI / 3}
+        maxPolarAngle={Math.PI / 2}
+        autoRotate={!spinning}
+        autoRotateSpeed={0.5}
+      />
+      
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
+      <pointLight position={[-10, -10, -5]} intensity={0.5} color="#ff00ff" />
+      
+      <Environment preset="night" />
+      
+      {/* 9x9 Grid of 3D Reels */}
+      {grid.map((row, rowIndex) => (
+        row.map((symbol, colIndex) => {
+          const cellKey = `${rowIndex}-${colIndex}`
+          const isWinning = winningCells.has(cellKey)
+          
+          return (
+            <group 
+              key={cellKey}
+              position={[
+                (colIndex - 4) * 1.2,
+                (4 - rowIndex) * 1.2,
+                0
+              ]}
+            >
+              <SlotReel3D
+                symbol={symbol}
+                spinning={spinning}
+                index={rowIndex * 9 + colIndex}
+                isWinning={isWinning}
+                columnDelay={colIndex}
+              />
+            </group>
+          )
+        })
+      ))}
+      
+      {/* Glowing base platform */}
+      <mesh position={[0, -5.5, -2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[16, 16]} />
+        <meshStandardMaterial 
+          color="#0a0a0a" 
+          metalness={0.8}
+          roughness={0.2}
+        />
+      </mesh>
+    </>
+  )
+}
 
 export default function MatromatPage() {
   const [user, setUser] = useState<User | null>(null)
-  const [coins, setCoins] = useState(1000)
+  const [smaze, setSmaze] = useState<number>(0)
+  const [loading, setLoading] = useState(true)
   const [bet, setBet] = useState(10)
-  const [grid, setGrid] = useState<Grid>(Array(9).fill(null).map(() => Array(9).fill("💊")))
+  const [grid, setGrid] = useState<Grid>(
+    Array(9).fill(null).map(() => Array(9).fill('💊'))
+  )
   const [spinning, setSpinning] = useState(false)
   const [lastWin, setLastWin] = useState(0)
   const [winningCells, setWinningCells] = useState<Set<string>>(new Set())
   const [jackpot, setJackpot] = useState(false)
   const [totalWinnings, setTotalWinnings] = useState(0)
-  const [highScore, setHighScore] = useState(0)
-  const [animationProgress, setAnimationProgress] = useState(0)
   const supabase = createClient()
   const animationRef = useRef<number | null>(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+    const loadData = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      
+      if (user) {
+        const { balance } = await getSmazeBalance()
+        setSmaze(balance)
+      }
+      
+      setLoading(false)
+    }
+    
+    loadData()
   }, [supabase.auth])
 
-  useEffect(() => {
-    if (coins > highScore) {
-      setHighScore(coins)
-    }
-  }, [coins, highScore])
-
-  const saveScore = async () => {
-    if (!user || totalWinnings <= 0) return
-    await supabase.from("game_scores").insert({
-      user_id: user.id,
-      game_id: "matromat",
-      score: totalWinnings,
-    })
-  }
-
-  const spin = () => {
-    if (coins < bet || spinning) return
+  const spin = async () => {
+    if (smaze < bet || spinning) return
 
     setSpinning(true)
-    setCoins(prev => prev - bet)
     setLastWin(0)
     setWinningCells(new Set())
     setJackpot(false)
-    setAnimationProgress(0)
     audioManager.playSound('dice')
 
-    // Smooth column-by-column animation from left to right
+    // Deduct bet from database
+    const { balance: newBalance, error } = await updateSmaze(-bet)
+    if (error) {
+      console.error('[v0] Failed to deduct bet:', error)
+      setSpinning(false)
+      return
+    }
+    setSmaze(newBalance)
+
+    // Animate columns
     let columnIndex = 0
     const animateColumn = () => {
       if (columnIndex < 9) {
-        // Update this column with random symbols
         setGrid(prev => {
           const newGrid = prev.map(row => [...row])
           for (let row = 0; row < 9; row++) {
@@ -94,12 +167,9 @@ export default function MatromatPage() {
           return newGrid
         })
         columnIndex++
-        setAnimationProgress((columnIndex / 9) * 100)
-        animationRef.current = window.setTimeout(animateColumn, 100) // 100ms per column = smooth
+        animationRef.current = window.setTimeout(animateColumn, 150)
       } else {
-        // Animation complete, calculate win
         setSpinning(false)
-        setAnimationProgress(100)
         calculateWin()
       }
     }
@@ -107,13 +177,11 @@ export default function MatromatPage() {
     animateColumn()
   }
 
-  const calculateWin = () => {
-    const newGrid = grid
+  const calculateWin = async () => {
     let totalWin = 0
     const winCells = new Set<string>()
     let hasJackpot = false
 
-    // Check all 81 possible winning lines
     const lines: number[][][] = []
 
     // Horizontal lines (9)
@@ -127,63 +195,17 @@ export default function MatromatPage() {
     }
 
     // Main diagonals (2)
-    lines.push(Array(9).fill(null).map((_, i) => [i, i])) // Top-left to bottom-right
-    lines.push(Array(9).fill(null).map((_, i) => [i, 8 - i])) // Top-right to bottom-left
+    lines.push(Array(9).fill(null).map((_, i) => [i, i]))
+    lines.push(Array(9).fill(null).map((_, i) => [i, 8 - i]))
 
-    // Parallel diagonals - top-left to bottom-right direction (14)
-    for (let startCol = 1; startCol < 9; startCol++) {
-      const line: number[][] = []
-      for (let i = 0; i < 9 - startCol; i++) {
-        line.push([i, startCol + i])
-      }
-      if (line.length >= 3) lines.push(line)
-    }
-    for (let startRow = 1; startRow < 9; startRow++) {
-      const line: number[][] = []
-      for (let i = 0; i < 9 - startRow; i++) {
-        line.push([startRow + i, i])
-      }
-      if (line.length >= 3) lines.push(line)
-    }
-
-    // Parallel diagonals - top-right to bottom-left direction (14)
-    for (let startCol = 0; startCol < 8; startCol++) {
-      const line: number[][] = []
-      for (let i = 0; i <= startCol && i < 9; i++) {
-        line.push([i, startCol - i])
-      }
-      if (line.length >= 3) lines.push(line)
-    }
-    for (let startRow = 1; startRow < 9; startRow++) {
-      const line: number[][] = []
-      for (let i = 0; startRow + i < 9 && 8 - i >= 0; i++) {
-        line.push([startRow + i, 8 - i])
-      }
-      if (line.length >= 3) lines.push(line)
-    }
-
-    // Additional winning patterns: 3x3 blocks (9), etc.
-    for (let blockRow = 0; blockRow < 3; blockRow++) {
-      for (let blockCol = 0; blockCol < 3; blockCol++) {
-        const block: number[][] = []
-        for (let r = 0; r < 3; r++) {
-          for (let c = 0; c < 3; c++) {
-            block.push([blockRow * 3 + r, blockCol * 3 + c])
-          }
-        }
-        lines.push(block)
-      }
-    }
-
-    // Check each line for matches
+    // Check each line
     lines.forEach(line => {
-      const symbols = line.map(([r, c]) => newGrid[r][c])
+      const symbols = line.map(([r, c]) => grid[r][c])
       const counts: Record<string, number> = {}
       symbols.forEach(symbol => {
         counts[symbol] = (counts[symbol] || 0) + 1
       })
 
-      // Find best match (3 or more of same symbol)
       Object.entries(counts).forEach(([symbol, count]) => {
         if (count >= 3) {
           const symbolValue = SYMBOL_VALUES[symbol] || 1
@@ -202,9 +224,8 @@ export default function MatromatPage() {
           const lineWin = bet * multiplier * symbolValue
           totalWin += lineWin
 
-          // Mark winning cells
           line.forEach(([r, c]) => {
-            if (newGrid[r][c] === symbol) {
+            if (grid[r][c] === symbol) {
               winCells.add(`${r}-${c}`)
             }
           })
@@ -215,10 +236,22 @@ export default function MatromatPage() {
     if (totalWin > 0) {
       setLastWin(totalWin)
       setWinningCells(winCells)
-      setCoins(prev => prev + totalWin)
       setTotalWinnings(prev => prev + totalWin)
       setJackpot(hasJackpot)
       audioManager.playSound(hasJackpot ? 'win' : 'coin')
+
+      // Add winnings to database
+      const { balance: newBalance } = await updateSmaze(totalWin)
+      setSmaze(newBalance)
+
+      // Save score
+      if (user) {
+        await supabase.from('game_scores').insert({
+          user_id: user.id,
+          game_id: 'matromat',
+          score: totalWin,
+        })
+      }
     } else {
       audioManager.playSound('lose')
     }
@@ -230,18 +263,15 @@ export default function MatromatPage() {
     audioManager.playSound('click')
   }
 
-  const resetGame = () => {
-    if (totalWinnings > 0) {
-      saveScore()
-    }
-    setCoins(1000)
+  const handleReset = async () => {
+    const { balance } = await resetSmaze()
+    setSmaze(balance)
     setBet(10)
-    setGrid(Array(9).fill(null).map(() => Array(9).fill("💊")))
+    setGrid(Array(9).fill(null).map(() => Array(9).fill('💊')))
     setLastWin(0)
     setWinningCells(new Set())
     setJackpot(false)
     setTotalWinnings(0)
-    setHighScore(0)
     audioManager.playSound('click')
   }
 
@@ -253,192 +283,177 @@ export default function MatromatPage() {
     }
   }, [])
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="fixed inset-0 bg-gradient-to-b from-[#00ff00]/5 via-background to-background -z-10" />
-      <div className="fixed top-40 left-1/4 w-96 h-96 bg-[#00ff00]/10 rounded-full blur-3xl -z-10" />
 
-      <header className="p-4 border-b border-border/50">
+      <header className="p-4 border-b border-border/50 backdrop-blur-sm bg-background/80">
         <div className="container mx-auto flex items-center justify-between">
-          <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
+          <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4" />
             Zpět
           </Link>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Coins className="h-5 w-5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
-              <span className="font-bold text-[#00ff00]" style={{ textShadow: '0 0 5px #00ff00' }}>{coins.toLocaleString()}</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <Coins className="h-5 w-5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
+            <span className="font-bold text-xl text-[#00ff00]" style={{ textShadow: '0 0 5px #00ff00' }}>
+              {smaze.toLocaleString()} SMAŽE
+            </span>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Matromat 9x9</h1>
-          <p className="text-muted-foreground">81 linií - Toč a vyhrávej!</p>
+      <main className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="text-center mb-6">
+          <h1 className="text-4xl font-bold text-foreground mb-2">Matromat 3D</h1>
+          <p className="text-muted-foreground">Herní automat s 81 liniemi</p>
         </div>
 
-        {/* Slot Machine */}
-        <Card className="mb-6 border-[#00ff00]/30 bg-gradient-to-b from-card/80 to-card/50 backdrop-blur-sm overflow-hidden">
-          <div className="h-2 bg-gradient-to-r from-[#00ff00] via-[#ff00ff] to-[#0088ff]" />
-          
-          <CardContent className="p-6">
-            {/* Jackpot Display */}
+        <div className="grid lg:grid-cols-[1fr,400px] gap-6">
+          {/* 3D Canvas */}
+          <Card className="border-[#00ff00]/30 bg-gradient-to-b from-card/80 to-card/50 backdrop-blur-sm overflow-hidden">
+            <div className="h-2 bg-gradient-to-r from-[#00ff00] via-[#ff00ff] to-[#0088ff]" />
+            
+            <CardContent className="p-0">
+              <div className="w-full h-[600px] bg-black/50">
+                <Canvas shadows>
+                  <Suspense fallback={null}>
+                    <SlotMachine3D 
+                      grid={grid} 
+                      spinning={spinning} 
+                      winningCells={winningCells} 
+                    />
+                  </Suspense>
+                </Canvas>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Controls */}
+          <div className="space-y-4">
             {jackpot && (
-              <div className="mb-4 p-4 bg-[#00ff00]/20 rounded-xl border border-[#00ff00]/50 text-center animate-pulse">
-                <Sparkles className="h-8 w-8 text-[#00ff00] mx-auto mb-2" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
-                <p className="text-2xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>JACKPOT! CELÁ MŘÍŽKA!</p>
-              </div>
+              <Card className="border-[#00ff00]/50 bg-[#00ff00]/10">
+                <CardContent className="p-4 text-center">
+                  <Sparkles className="h-10 w-10 text-[#00ff00] mx-auto mb-2 animate-pulse" />
+                  <p className="text-2xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00' }}>
+                    JACKPOT!
+                  </p>
+                </CardContent>
+              </Card>
             )}
 
-            {/* Progress Bar */}
-            {spinning && (
-              <div className="mb-4">
-                <div className="w-full bg-secondary/30 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[#00ff00] to-[#ff00ff] transition-all duration-100"
-                    style={{ width: `${animationProgress}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* 9x9 Grid */}
-            <div className="mb-6 p-4 bg-background/50 rounded-xl border border-border/50 overflow-x-auto">
-              <div className="inline-block min-w-max">
-                {grid.map((row, rowIndex) => (
-                  <div key={rowIndex} className="flex gap-1 mb-1 last:mb-0">
-                    {row.map((symbol, colIndex) => {
-                      const cellKey = `${rowIndex}-${colIndex}`
-                      const isWinning = winningCells.has(cellKey)
-                      return (
-                        <div
-                          key={colIndex}
-                          className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-lg sm:text-xl bg-secondary rounded border transition-all ${
-                            spinning
-                              ? "border-primary/50 animate-pulse"
-                              : isWinning
-                              ? "border-[#00ff00] bg-[#00ff00]/20 scale-110"
-                              : "border-border/50"
-                          }`}
-                          style={isWinning ? { boxShadow: '0 0 10px #00ff00' } : {}}
-                        >
-                          {symbol}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Win Display */}
             {lastWin > 0 && !spinning && (
-              <div className="mb-4 text-center">
-                <p className="text-lg text-muted-foreground">Výhra!</p>
-                <p className="text-3xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>+{lastWin.toLocaleString()} mincí</p>
-                <p className="text-sm text-muted-foreground mt-1">{winningCells.size} vyhrávajících buněk</p>
-              </div>
+              <Card className="border-[#00ff00]/30 bg-card/50">
+                <CardContent className="p-4 text-center">
+                  <p className="text-sm text-muted-foreground mb-1">Výhra!</p>
+                  <p className="text-3xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00' }}>
+                    +{lastWin.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {winningCells.size} vyhrávajících symbolů
+                  </p>
+                </CardContent>
+              </Card>
             )}
 
             {/* Bet Controls */}
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => adjustBet(-10)}
-                disabled={bet <= 10 || spinning}
-                className="border-border bg-transparent"
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">Sázka</p>
-                <p className="text-xl font-bold text-foreground">{bet}</p>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => adjustBet(10)}
-                disabled={bet >= 100 || spinning}
-                className="border-border bg-transparent"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Spin Button */}
-            <Button
-              onClick={spin}
-              disabled={coins < bet || spinning}
-              className="w-full h-14 text-xl bg-gradient-to-r from-[#00ff00] to-[#ff00ff] hover:from-[#00ff00]/90 hover:to-[#ff00ff]/90 text-black font-bold"
-              style={{ boxShadow: '0 0 20px #00ff00, 0 0 40px #ff00ff' }}
-            >
-              {spinning ? "Točí se..." : coins < bet ? "Nedostatek mincí" : "ZATOČIT!"}
-            </Button>
-
-            {coins < bet && coins > 0 && (
-              <p className="text-center text-sm text-muted-foreground mt-2">
-                Sniž sázku nebo začni novou hru
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <Card className="border-border/50 bg-card/50">
-            <CardContent className="p-4 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Celkové výhry</p>
-              <p className="text-lg font-bold text-[#00ff00]" style={{ textShadow: '0 0 5px #00ff00' }}>+{totalWinnings.toLocaleString()}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border/50 bg-card/50">
-            <CardContent className="p-4 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Rekord mincí</p>
-              <p className="text-lg font-bold text-[#ff00ff]" style={{ textShadow: '0 0 5px #ff00ff' }}>{highScore.toLocaleString()}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Symbol Values */}
-        <Card className="border-border/50 bg-card/30 mb-6">
-          <CardContent className="p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3">Hodnoty symbolů</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
-              {Object.entries(SYMBOL_NAMES).map(([symbol, name]) => (
-                <div key={symbol} className="flex items-center justify-between p-2 bg-secondary/30 rounded">
-                  <span className="text-xl">{symbol}</span>
-                  <span className="text-xs text-muted-foreground">{name}</span>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs">
-                    {SYMBOL_VALUES[symbol]}x
-                  </Badge>
+            <Card className="border-border/50 bg-card/50">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => adjustBet(-10)}
+                    disabled={bet <= 10 || spinning}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Sázka</p>
+                    <p className="text-2xl font-bold">{bet} SMAŽE</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => adjustBet(10)}
+                    disabled={bet >= 100 || spinning}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-              ))}
-            </div>
-            <div className="mt-3 pt-3 border-t border-border/50">
-              <p className="text-xs text-muted-foreground">* 3+ stejné symboly = výhra • 9 stejných = JACKPOT!</p>
-              <p className="text-xs text-muted-foreground">* 81 způsobů jak vyhrát: řádky, sloupce, diagonály, bloky 3x3 atd.</p>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Reset Button */}
-        {coins === 0 && (
-          <Card className="border-destructive/30 bg-destructive/5">
-            <CardContent className="p-6 text-center">
-              <p className="text-lg font-semibold text-foreground mb-4">Došly ti mince!</p>
-              {totalWinnings > 0 && user && (
-                <p className="text-[#00ff00] text-sm mb-4">Celkové výhry {totalWinnings} budou uloženy</p>
-              )}
-              <Button onClick={resetGame} className="bg-primary hover:bg-primary/90 gap-2">
-                <RotateCcw className="h-4 w-4" />
-                Nová hra (1000 mincí)
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+                <Button
+                  onClick={spin}
+                  disabled={smaze < bet || spinning}
+                  className="w-full h-14 text-xl font-bold bg-gradient-to-r from-[#00ff00] to-[#ff00ff] hover:from-[#00ff00]/90 hover:to-[#ff00ff]/90 text-black"
+                  style={{ boxShadow: '0 0 20px #00ff00, 0 0 40px #ff00ff' }}
+                >
+                  {spinning ? 'Točí se...' : smaze < bet ? 'Nedostatek SMAŽE' : 'ZATOČIT!'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Stats */}
+            <Card className="border-border/50 bg-card/50">
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Celkové výhry</span>
+                    <span className="text-lg font-bold text-[#00ff00]">
+                      +{totalWinnings.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Současný zůstatek</span>
+                    <span className="text-lg font-bold text-[#ff00ff]">
+                      {smaze.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Symbol Values */}
+            <Card className="border-border/50 bg-card/30">
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold mb-3">Hodnoty symbolů</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {Object.entries(SYMBOL_NAMES).map(([symbol, name]) => (
+                    <div key={symbol} className="flex items-center justify-between p-2 bg-secondary/30 rounded">
+                      <span className="text-lg">{symbol}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {SYMBOL_VALUES[symbol]}x
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  3+ stejné = výhra • 9 stejných = JACKPOT!
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Reset */}
+            {smaze < bet && (
+              <Card className="border-destructive/30 bg-destructive/5">
+                <CardContent className="p-4">
+                  <p className="text-sm font-semibold mb-3">Nedostatek SMAŽE!</p>
+                  <Button onClick={handleReset} className="w-full gap-2">
+                    <RotateCcw className="h-4 w-4" />
+                    Reset (2000 SMAŽE)
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   )
