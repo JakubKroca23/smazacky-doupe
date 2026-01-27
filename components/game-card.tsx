@@ -64,10 +64,10 @@ export function GameCard({
         {/* Animated background glow */}
         <div className="absolute inset-0 rounded-[20px] bg-gradient-to-br from-[#ff00ff]/5 via-transparent to-[#0088ff]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         
-        {/* Badge - NASYPÁNA NOVINKA */}
+        {/* Badge - NOVINKA */}
         {badge === "NASYPÁNA NOVINKA" && (
           <div className="absolute top-[-12px] right-[-20px] bg-gradient-to-r from-[#00ff00] to-[#00dd00] text-black px-6 py-2 text-xs font-black rotate-[12deg] shadow-[0_0_30px_rgba(0,255,0,0.8)] z-[100] animate-pulse rounded-full uppercase tracking-wider">
-            {badge}
+            NOVINKA
           </div>
         )}
 
