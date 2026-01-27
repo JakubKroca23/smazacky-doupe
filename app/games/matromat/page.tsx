@@ -111,7 +111,9 @@ export default function MatromatPage() {
   const [loading, setLoading] = useState(true)
   const [bet, setBet] = useState(10)
   const [grid, setGrid] = useState<Grid>(
-    Array(9).fill(null).map(() => Array(9).fill('💊'))
+    Array(9).fill(null).map(() => 
+      Array(9).fill(null).map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)])
+    )
   )
   const [spinning, setSpinning] = useState(false)
   const [lastWin, setLastWin] = useState(0)
@@ -123,11 +125,14 @@ export default function MatromatPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      console.log('[v0] Loading matromat data...')
       const { data: { user } } = await supabase.auth.getUser()
+      console.log('[v0] User:', user?.id)
       setUser(user)
       
       if (user) {
-        const { balance } = await getSmazeBalance()
+        const { balance, error } = await getSmazeBalance()
+        console.log('[v0] Initial SMAŽE balance:', balance, 'Error:', error)
         setSmaze(balance)
       }
       
@@ -140,6 +145,7 @@ export default function MatromatPage() {
   const spin = async () => {
     if (smaze < bet || spinning) return
 
+    console.log('[v0] Starting spin, current balance:', smaze, 'bet:', bet)
     setSpinning(true)
     setLastWin(0)
     setWinningCells(new Set())
@@ -153,6 +159,7 @@ export default function MatromatPage() {
       setSpinning(false)
       return
     }
+    console.log('[v0] Balance after bet deduction:', newBalance)
     setSmaze(newBalance)
 
     // Animate columns
@@ -234,6 +241,7 @@ export default function MatromatPage() {
     })
 
     if (totalWin > 0) {
+      console.log('[v0] Win detected! Total win:', totalWin, 'Jackpot:', hasJackpot)
       setLastWin(totalWin)
       setWinningCells(winCells)
       setTotalWinnings(prev => prev + totalWin)
@@ -242,6 +250,7 @@ export default function MatromatPage() {
 
       // Add winnings to database
       const { balance: newBalance } = await updateSmaze(totalWin)
+      console.log('[v0] Balance after win credit:', newBalance)
       setSmaze(newBalance)
 
       // Save score
@@ -322,8 +331,8 @@ export default function MatromatPage() {
             <div className="h-2 bg-gradient-to-r from-[#00ff00] via-[#ff00ff] to-[#0088ff]" />
             
             <CardContent className="p-0">
-              <div className="w-full h-[600px] bg-black/50">
-                <Canvas shadows>
+              <div className="w-full h-[600px] bg-black relative">
+                <Canvas shadows gl={{ antialias: true, alpha: false }}>
                   <Suspense fallback={null}>
                     <SlotMachine3D 
                       grid={grid} 
