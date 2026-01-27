@@ -17,8 +17,19 @@ interface RaidStatisticsProps {
 }
 
 export function RaidStatistics({ stats }: RaidStatisticsProps) {
-  const successRate = stats.total_completed > 0 
-    ? Math.round((stats.total_success / stats.total_completed) * 100)
+  // Provide safe defaults if stats are undefined
+  const safeStats = {
+    total_completed: stats?.total_completed ?? 0,
+    total_success: stats?.total_success ?? 0,
+    total_failed: stats?.total_failed ?? 0,
+    best_time_seconds: stats?.best_time_seconds ?? null,
+    total_xp_earned: stats?.total_xp_earned ?? 0,
+    total_currency_earned: stats?.total_currency_earned ?? 0,
+    items_earned: stats?.items_earned ?? []
+  }
+
+  const successRate = safeStats.total_completed > 0 
+    ? Math.round((safeStats.total_success / safeStats.total_completed) * 100)
     : 0
 
   const formatTime = (seconds: number | null) => {
@@ -37,9 +48,9 @@ export function RaidStatistics({ stats }: RaidStatisticsProps) {
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total_completed}</div>
+            <div className="text-2xl font-bold">{safeStats.total_completed}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.total_success} úspěšných / {stats.total_failed} neúspěšných
+              {safeStats.total_success} úspěšných / {safeStats.total_failed} neúspěšných
             </p>
           </CardContent>
         </Card>
@@ -61,7 +72,7 @@ export function RaidStatistics({ stats }: RaidStatisticsProps) {
             <Timer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatTime(stats.best_time_seconds)}</div>
+            <div className="text-2xl font-bold">{formatTime(safeStats.best_time_seconds)}</div>
             <p className="text-xs text-muted-foreground">Minuty:Sekundy</p>
           </CardContent>
         </Card>
@@ -72,22 +83,22 @@ export function RaidStatistics({ stats }: RaidStatisticsProps) {
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total_xp_earned.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{safeStats.total_xp_earned.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.total_currency_earned.toLocaleString()} měna
+              {safeStats.total_currency_earned.toLocaleString()} měna
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {stats.items_earned && stats.items_earned.length > 0 && (
+      {safeStats.items_earned && safeStats.items_earned.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Získané Předměty z Raidů</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-              {stats.items_earned.map((item: any, idx: number) => (
+              {safeStats.items_earned.map((item: any, idx: number) => (
                 <div
                   key={idx}
                   className="flex items-center gap-2 p-3 rounded-lg border bg-card"

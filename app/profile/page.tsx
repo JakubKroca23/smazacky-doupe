@@ -44,11 +44,11 @@ async function getProfileData(userId: string) {
     .from("raid_stats")
     .select("*")
     .eq("user_id", userId)
-    .single()
+    .maybeSingle()
 
   return { 
     profile, 
-    playerStats: playerStats || { level: 1, xp: 0, currency: 0, health: 100, stamina: 100, luck: 10 },
+    playerStats: playerStats || { level: 1, xp: 0, currency: 0, health: 100, stamina: 100, luck: 10, smaze: 2000 },
     inventory: inventory || [],
     properties: properties || [],
     scores: scores || [],
