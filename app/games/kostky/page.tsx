@@ -379,9 +379,15 @@ export default function KostkyPage() {
   const handleRoll = async () => {
     if (!roomData) return
     const s = roomData.state
-    if (s.turn !== myData.id || s.isAnimating || !s.hasTakenThisRoll) return
     
-    if (s.rollCount === 3 && s.turnBasePoints < 350) {
+    // Can roll if: it's my turn, not animating, and either first roll (rollCount === 0) or took something after last roll
+    if (s.turn !== myData.id || s.isAnimating) return
+    if (s.rollCount > 0 && !s.hasTakenThisRoll) {
+      showMsg("Musíš něco odebrat!")
+      return
+    }
+    
+    if (s.rollCount >= 3 && s.turnBasePoints < 350) {
       showMsg("🚭 ABSŤÁK! MÁLO BODŮ!")
       setTimeout(() => passTurn(0), 500)
       return
@@ -404,11 +410,12 @@ export default function KostkyPage() {
       
       if (!hasScoring(finalDice)) {
         showMsg("💩 NULA!")
-        const newData = { ...roomData, state: { ...s, lastDice: finalDice, isAnimating: false, sixCount: newSixCount, mirrorActive } }
+        const newData = { ...roomData, state: { ...s, lastDice: finalDice, isAnimating: false, sixCount: newSixCount, mirrorActive, hasTakenThisRoll: false } }
         await broadcastUpdate(newData)
         setTimeout(() => passTurn(0), 1500)
       } else {
-        const newData = { ...roomData, state: { ...s, lastDice: finalDice, rollCount: s.rollCount + 1, isAnimating: false, sixCount: newSixCount, mirrorActive } }
+        // After rolling, hasTakenThisRoll = false, player must take something before rolling again
+        const newData = { ...roomData, state: { ...s, lastDice: finalDice, rollCount: s.rollCount + 1, isAnimating: false, sixCount: newSixCount, mirrorActive, hasTakenThisRoll: false } }
         await broadcastUpdate(newData)
       }
     }, 1000)
@@ -722,7 +729,7 @@ export default function KostkyPage() {
               id="roll-btn"
               style={{ flex: 2, height: '60px', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}
               onClick={handleRoll}
-              disabled={roomData.state.turn !== myData.id || roomData.state.isAnimating || !roomData.state.hasTakenThisRoll}
+              disabled={roomData.state.turn !== myData.id || roomData.state.isAnimating || (roomData.state.rollCount > 0 && !roomData.state.hasTakenThisRoll)}
             >
               HODIT 🎲
             </button>
