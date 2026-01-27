@@ -202,7 +202,7 @@ export default function KostkyPage() {
       
       bag.onclick = async (e) => {
         e.stopPropagation()
-        createCrystals(e.clientX, e.clientY)
+        spawnParticles(e.clientX, e.clientY)
         if (myData.room) {
           await supabase.rpc('increment_gramy', { room_id: myData.room, player_id: myData.id })
           showMsg("+1g matra!")
@@ -217,7 +217,7 @@ export default function KostkyPage() {
     }, 1200)
     
     return () => clearInterval(interval)
-  }, [screen, myData.room, myData.id, createCrystals, supabase])
+  }, [screen, myData.room, myData.id, spawnParticles, supabase])
 
   // Subscribe to room updates
   useEffect(() => {
