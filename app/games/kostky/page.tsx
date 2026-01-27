@@ -118,19 +118,36 @@ export default function KostkyPage() {
     }
   }, [])
 
-  // Create crystals effect
-  const createCrystals = useCallback((x: number, y: number) => {
-    for(let i = 0; i < 15; i++) {
-      const cry = document.createElement('div')
-      cry.className = 'crystal'
-      cry.innerText = '💎'
-      cry.style.left = x + 'px'
-      cry.style.top = y + 'px'
-      cry.style.setProperty('--cx', (Math.random() - 0.5) * 400 + 'px')
-      cry.style.setProperty('--cy', (Math.random() - 0.5) * 400 + 'px')
-      cry.style.setProperty('--cr', (Math.random() * 720) + 'deg')
-      document.body.appendChild(cry)
-      setTimeout(() => cry.remove(), 1500)
+  // Create particle effect (spawnP equivalent)
+  const spawnParticles = useCallback((x: number, y: number) => {
+    for (let i = 0; i < 8; i++) {
+      const particle = document.createElement('div')
+      particle.style.position = 'absolute'
+      particle.style.width = '4px'
+      particle.style.height = '4px'
+      particle.style.left = x + 'px'
+      particle.style.top = y + 'px'
+      particle.style.background = '#bc13fe'
+      particle.style.boxShadow = '0 0 5px #bc13fe'
+      particle.style.borderRadius = '50%'
+      particle.style.pointerEvents = 'none'
+      particle.style.zIndex = '1000'
+      
+      const table = document.getElementById('dice-table')
+      if (table) table.appendChild(particle)
+      
+      let vx = (Math.random() - 0.5) * 8
+      let vy = (Math.random() - 0.5) * 8
+      let op = 1
+      
+      const anim = () => {
+        particle.style.left = (parseFloat(particle.style.left) + vx) + 'px'
+        particle.style.top = (parseFloat(particle.style.top) + vy) + 'px'
+        particle.style.opacity = String(op -= 0.04)
+        if (op > 0) requestAnimationFrame(anim)
+        else particle.remove()
+      }
+      anim()
     }
   }, [])
 
@@ -535,9 +552,20 @@ export default function KostkyPage() {
     }, 1000)
   }
 
-  // Take a die
+  // Take a die with particle effect
   const takeDie = async (idx: number, val: number) => {
     if (!roomData) return
+    
+    // Spawn particles at die position
+    const dieEl = document.querySelectorAll('.die')[idx] as HTMLElement
+    if (dieEl) {
+      const rect = dieEl.getBoundingClientRect()
+      const tableRect = document.getElementById('dice-table')?.getBoundingClientRect()
+      if (tableRect) {
+        spawnParticles(rect.left - tableRect.left + 27, rect.top - tableRect.top + 27)
+      }
+    }
+    
     const state = roomData.state
     let dice = [...state.lastDice]
     let stored = [...state.storedDice]
@@ -550,19 +578,33 @@ export default function KostkyPage() {
       addedPoints = 1500
       stored.push(...dice)
       dice = []
-      audioManager.playSound('win') // Straight - big win sound
+      audioManager.playSound('win')
     } else if (counts[val] >= 3) {
       const c = counts[val]
       addedPoints = (val === 1 ? 1000 : val * 100) * Math.pow(2, c - 3)
       dice = dice.filter(v => v !== val)
       stored.push(...Array(c).fill(val))
-      audioManager.playSound('coin') // Triple+ - coin sound
+      audioManager.playSound('coin')
     } else {
       addedPoints = val === 1 ? 100 : 50
       stored.push(val)
       dice.splice(idx, 1)
-      audioManager.playSound('click') // Single take - click sound
+      audioManager.playSound('click')
     }
+    
+    if (isRushActive) addedPoints *= 2
+    
+    const newState = {
+      ...state,
+      lastDice: dice,
+      storedDice: stored,
+      turnBasePoints: state.turnBasePoints + addedPoints,
+      hasTakenThisRoll: true
+    }
+    
+    const newData = { ...roomData, state: newState }
+    await broadcastUpdate(newData)
+  }
     
     if (isRushActive) addedPoints *= 2
     
@@ -1277,6 +1319,7 @@ export default function KostkyPage() {
           cursor: pointer;
           user-select: none;
           transition: transform 0.1s, box-shadow 0.1s;
+          border: 2px solid transparent;
         }
 
         .die:hover {
@@ -1285,14 +1328,14 @@ export default function KostkyPage() {
         }
 
         .die.can-take {
-          box-shadow: 0 0 20px var(--neon-green), 0 5px 0 #8f8;
-          border: 3px solid var(--neon-green);
+          box-shadow: 0 0 20px #ffd700, 0 5px 0 #8f8;
+          border: 2px solid #ffd700;
           animation: pulse-glow 1s infinite;
         }
 
         @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 20px var(--neon-green), 0 5px 0 #8f8; }
-          50% { box-shadow: 0 0 35px var(--neon-green), 0 5px 0 #8f8; }
+          0%, 100% { box-shadow: 0 0 20px #ffd700, 0 5px 0 #8f8; }
+          50% { box-shadow: 0 0 35px #ffd700, 0 5px 0 #8f8; }
         }
 
         .die-s {
