@@ -10,16 +10,8 @@ interface GameCardProps {
   icon: "dice" | "users" | "slot" | "trophy"
   difficulty: "Lehká" | "Střední" | "Těžká"
   badge?: string
-  badgeColor?: "blue" | "green" | "pink" | "badtrip"
   emoji?: string
   hoverColor?: "blue" | "green" | "pink" | "badtrip"
-}
-
-const badgeColorMap = {
-  blue: "bg-[#0088ff] text-black",
-  green: "bg-[#00ff00] text-black",
-  pink: "bg-[#ff00ff] text-black",
-  badtrip: "bg-[#ff0055] text-white",
 }
 
 const hoverColorMap = {
@@ -34,7 +26,6 @@ export function GameCard({
   title,
   difficulty,
   badge,
-  badgeColor = "blue",
   emoji = "🎮",
   hoverColor = "blue",
 }: GameCardProps) {
