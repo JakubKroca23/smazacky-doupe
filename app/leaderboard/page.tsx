@@ -5,9 +5,6 @@ import { Trophy, Medal, Crown } from "lucide-react"
 const GAMES = [
   { id: "all", name: "Všechny Hry" },
   { id: "kostky", name: "Smažácký Kostky" },
-  { id: "conatosmazky", name: "Co na to Smažky?" },
-  { id: "matromat", name: "Matromat" },
-  { id: "pernikar", name: "Chceš být Perníkářem?" },
 ]
 
 async function getLeaderboardData(gameId: string) {

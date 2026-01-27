@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProfileEditDialog } from "@/components/profile-edit-dialog"
-import { RaidStatistics } from "@/components/raid-statistics"
 
 async function getProfileData(userId: string) {
   const supabase = await createClient()
@@ -41,27 +40,12 @@ async function getProfileData(userId: string) {
       .order("created_at", { ascending: false })
       .limit(50)
 
-    const { data: raidStats } = await supabase
-      .from("raid_stats")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle()
-
     return { 
       profile: profile || null, 
       playerStats: playerStats || { level: 1, xp: 0, currency: 0, health: 100, stamina: 100, luck: 10, smaze: 2000 },
       inventory: inventory || [],
       properties: properties || [],
-      scores: scores || [],
-      raidStats: raidStats || { 
-        total_completed: 0, 
-        total_success: 0, 
-        total_failed: 0, 
-        best_time_seconds: null, 
-        total_xp_earned: 0, 
-        total_currency_earned: 0,
-        items_earned: []
-      }
+      scores: scores || []
     }
   } catch (error) {
     console.error('[v0] Error loading profile data:', error)
@@ -70,16 +54,7 @@ async function getProfileData(userId: string) {
       playerStats: { level: 1, xp: 0, currency: 0, health: 100, stamina: 100, luck: 10, smaze: 2000 },
       inventory: [],
       properties: [],
-      scores: [],
-      raidStats: { 
-        total_completed: 0, 
-        total_success: 0, 
-        total_failed: 0, 
-        best_time_seconds: null, 
-        total_xp_earned: 0, 
-        total_currency_earned: 0,
-        items_earned: []
-      }
+      scores: []
     }
   }
 }
@@ -284,11 +259,10 @@ export default async function ProfilePage() {
 
           {/* Tabbed Content */}
           <Tabs defaultValue="inventory" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="inventory">Inventář</TabsTrigger>
               <TabsTrigger value="properties">Nemovitosti</TabsTrigger>
               <TabsTrigger value="stats">Statistiky</TabsTrigger>
-              <TabsTrigger value="raids">Raidy</TabsTrigger>
             </TabsList>
 
             {/* Inventory Tab */}
@@ -437,11 +411,6 @@ export default async function ProfilePage() {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
-
-            {/* Raids Tab */}
-            <TabsContent value="raids">
-              <RaidStatistics stats={raidStats} />
             </TabsContent>
           </Tabs>
         </div>

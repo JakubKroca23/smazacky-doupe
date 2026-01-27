@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { RealtimeChannel } from "@supabase/supabase-js"
+import { audioManager } from "@/lib/audio-manager"
 
 const WIN_SCORE = 10000
 
@@ -391,36 +392,80 @@ export default function KostkyPage() {
     await broadcastUpdate(newData)
   }
 
-  // Physics animation for rolling dice
+  // Physics animation for rolling dice with collision avoidance
   const startPhysicsAnimation = useCallback((count: number) => {
     if (animFrameRef.current) return
     
     const table = document.getElementById('dice-table')
     if (!table) return
     
-    const dieSize = 45
-    const initialPhysics = Array.from({ length: count }, () => ({
-      x: Math.random() * (table.clientWidth - dieSize),
-      y: Math.random() * (table.clientHeight - dieSize),
-      vx: (Math.random() - 0.5) * 40,
-      vy: (Math.random() - 0.5) * 40,
-      r: Math.random() * 360,
-      vr: (Math.random() - 0.5) * 20
-    }))
+    const dieSize = 55
+    const tableWidth = table.clientWidth - 70 // Account for aside-storage
+    const tableHeight = table.clientHeight
+    
+    // Generate non-overlapping starting positions
+    const initialPhysics: {x: number, y: number, vx: number, vy: number, r: number, vr: number}[] = []
+    for (let i = 0; i < count; i++) {
+      let x: number, y: number
+      let attempts = 0
+      do {
+        x = Math.random() * (tableWidth - dieSize - 20) + 10
+        y = Math.random() * (tableHeight - dieSize - 20) + 10
+        attempts++
+      } while (
+        attempts < 50 && 
+        initialPhysics.some(p => Math.abs(p.x - x) < dieSize + 10 && Math.abs(p.y - y) < dieSize + 10)
+      )
+      
+      initialPhysics.push({
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 30,
+        vy: (Math.random() - 0.5) * 30,
+        r: Math.random() * 360,
+        vr: (Math.random() - 0.5) * 15
+      })
+    }
     setDicePhysics(initialPhysics)
+    
+    // Play dice roll sound
+    audioManager.playSound('dice')
 
+    let frameCount = 0
     const loop = () => {
+      frameCount++
       setDicePhysics(prev => {
-        const newPhysics = prev.map(p => {
+        const newPhysics = prev.map((p, idx) => {
           let newX = p.x + p.vx
           let newY = p.y + p.vy
-          let newVx = p.vx
-          let newVy = p.vy
+          let newVx = p.vx * 0.98 // Friction
+          let newVy = p.vy * 0.98
+          let newVr = p.vr * 0.98
           
-          if (newX < 0 || newX > (table?.clientWidth || 300) - dieSize) newVx *= -0.8
-          if (newY < 0 || newY > (table?.clientHeight || 200) - dieSize) newVy *= -0.8
+          // Wall collisions
+          if (newX < 5) { newX = 5; newVx *= -0.7 }
+          if (newX > tableWidth - dieSize - 5) { newX = tableWidth - dieSize - 5; newVx *= -0.7 }
+          if (newY < 5) { newY = 5; newVy *= -0.7 }
+          if (newY > tableHeight - dieSize - 5) { newY = tableHeight - dieSize - 5; newVy *= -0.7 }
           
-          return { x: newX, y: newY, vx: newVx, vy: newVy, r: p.r + p.vr, vr: p.vr }
+          // Dice-to-dice collision avoidance
+          prev.forEach((other, otherIdx) => {
+            if (idx === otherIdx) return
+            const dx = newX - other.x
+            const dy = newY - other.y
+            const dist = Math.sqrt(dx * dx + dy * dy)
+            if (dist < dieSize + 5 && dist > 0) {
+              const overlap = (dieSize + 5 - dist) / 2
+              const nx = dx / dist
+              const ny = dy / dist
+              newX += nx * overlap
+              newY += ny * overlap
+              newVx += nx * 2
+              newVy += ny * 2
+            }
+          })
+          
+          return { x: newX, y: newY, vx: newVx, vy: newVy, r: p.r + newVr, vr: newVr }
         })
         return newPhysics
       })
@@ -477,7 +522,8 @@ export default function KostkyPage() {
       if (newSixCount >= 23) { mirrorActive = true; newSixCount = 0 }
       
       if (!hasScoring(finalDice)) {
-        showMsg("💩 NULA!")
+        showMsg("NULA!")
+        audioManager.playSound('lose')
         const newData = { ...roomData, state: { ...s, lastDice: finalDice, isAnimating: false, sixCount: newSixCount, mirrorActive, hasTakenThisRoll: false } }
         await broadcastUpdate(newData)
         setTimeout(() => passTurn(0), 1500)
@@ -504,15 +550,18 @@ export default function KostkyPage() {
       addedPoints = 1500
       stored.push(...dice)
       dice = []
+      audioManager.playSound('win') // Straight - big win sound
     } else if (counts[val] >= 3) {
       const c = counts[val]
       addedPoints = (val === 1 ? 1000 : val * 100) * Math.pow(2, c - 3)
       dice = dice.filter(v => v !== val)
       stored.push(...Array(c).fill(val))
+      audioManager.playSound('coin') // Triple+ - coin sound
     } else {
       addedPoints = val === 1 ? 100 : 50
       stored.push(val)
       dice.splice(idx, 1)
+      audioManager.playSound('click') // Single take - click sound
     }
     
     if (isRushActive) addedPoints *= 2
@@ -533,9 +582,11 @@ export default function KostkyPage() {
   const bankPoints = async () => {
     if (!roomData) return
     if (roomData.state.turnBasePoints < 350) {
-      showMsg("🔞 MUSÍŠ MÍT ASPOŇ 350!")
+      showMsg("MUSIS MIT ASPON 350!")
+      audioManager.playSound('error')
       return
     }
+    audioManager.playSound('win')
     await passTurn(roomData.state.turnBasePoints)
   }
 
@@ -556,11 +607,13 @@ export default function KostkyPage() {
       strikes = 0
     } else {
       strikes++
+      audioManager.playSound('lose')
       if (strikes >= 3) {
         score = 0
         strikes = 0
         smazanoCount++
-        showMsg("💀 SMAZÁNO! 💀")
+        showMsg("SMAZANO!")
+        audioManager.playSound('error')
         const newData = { ...roomData, visuals: { ...roomData.visuals, tripTimestamp: Date.now() } }
         await broadcastUpdate(newData)
       }
@@ -1184,16 +1237,18 @@ export default function KostkyPage() {
           display: flex;
           position: relative;
           border: 3px solid var(--main);
-          margin: 5px 0;
-          background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
+          margin: 10px 0;
+          background: radial-gradient(ellipse at center, #1a2a1a 0%, #0a150a 50%, #000 100%);
           border-radius: 20px;
           overflow: hidden;
-          min-height: 200px;
+          min-height: 350px;
+          box-shadow: inset 0 0 60px rgba(0, 255, 100, 0.1), 0 0 30px rgba(255, 0, 255, 0.3);
         }
 
         #dice-table {
           flex: 1;
           position: relative;
+          background: radial-gradient(ellipse at center, rgba(0, 100, 50, 0.15) 0%, transparent 70%);
         }
 
         #aside-storage {
@@ -1208,24 +1263,36 @@ export default function KostkyPage() {
 
         .die {
           position: absolute;
-          width: 45px;
-          height: 45px;
-          background: #fff;
+          width: 55px;
+          height: 55px;
+          background: linear-gradient(145deg, #ffffff 0%, #e8e8e8 100%);
           color: black;
           display: flex;
           justify-content: center;
           align-items: center;
-          font-size: 1.4rem;
+          font-size: 1.8rem;
           font-weight: 900;
-          border-radius: 8px;
-          box-shadow: 0 4px 0 #bbb;
+          border-radius: 10px;
+          box-shadow: 0 5px 0 #bbb, 0 8px 15px rgba(0,0,0,0.4);
           cursor: pointer;
           user-select: none;
+          transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .die:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 7px 0 #bbb, 0 12px 20px rgba(0,0,0,0.5);
         }
 
         .die.can-take {
-          box-shadow: 0 0 15px var(--neon-green);
-          border: 2px solid var(--neon-green);
+          box-shadow: 0 0 20px var(--neon-green), 0 5px 0 #8f8;
+          border: 3px solid var(--neon-green);
+          animation: pulse-glow 1s infinite;
+        }
+
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 20px var(--neon-green), 0 5px 0 #8f8; }
+          50% { box-shadow: 0 0 35px var(--neon-green), 0 5px 0 #8f8; }
         }
 
         .die-s {
