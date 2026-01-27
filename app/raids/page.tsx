@@ -212,6 +212,7 @@ export default function RaidsPage() {
     if (!activeRaid || !enemies[currentEnemyIndex]) return
 
     const currentEnemy = enemies[currentEnemyIndex]
+    console.log('[v0] Attacking enemy:', currentEnemy.name, 'HP:', currentEnemy.hp)
     
     // Player attacks
     const playerDamage = Math.floor(Math.random() * 20) + 10 + (playerStats.level * 2)
@@ -226,16 +227,20 @@ export default function RaidsPage() {
 
     // Check if enemy defeated
     if (newEnemyHp <= 0) {
+      console.log('[v0] Enemy defeated!', 'Current index:', currentEnemyIndex, 'Total enemies:', enemies.length)
       setCombatLog(prev => [`💀 ${currentEnemy.name} poražen!`, ...prev.slice(0, 9)])
       audioManager.playSound('coin')
       
       // Move to next enemy or complete raid
-      if (currentEnemyIndex < enemies.length - 1) {
+      const nextIndex = currentEnemyIndex + 1
+      if (nextIndex < enemies.length) {
+        console.log('[v0] Moving to next enemy at index:', nextIndex)
         setTimeout(() => {
-          setCurrentEnemyIndex(prev => prev + 1)
-          setCombatLog(prev => [`🎯 Další nepřítel: ${newEnemies[currentEnemyIndex + 1].name}!`, ...prev.slice(0, 9)])
+          setCurrentEnemyIndex(nextIndex)
+          setCombatLog(prev => [`🎯 Další nepřítel: ${newEnemies[nextIndex].name}!`, ...prev.slice(0, 9)])
         }, 1000)
       } else {
+        console.log('[v0] All enemies defeated! Completing raid.')
         setTimeout(() => {
           completeRaid(true)
         }, 1000)
@@ -254,6 +259,7 @@ export default function RaidsPage() {
 
       // Check if player defeated
       if (newPlayerHp <= 0) {
+        console.log('[v0] Player defeated!')
         setTimeout(() => {
           completeRaid(false)
         }, 1000)
