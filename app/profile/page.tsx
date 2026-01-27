@@ -11,55 +11,75 @@ import { RaidStatistics } from "@/components/raid-statistics"
 async function getProfileData(userId: string) {
   const supabase = await createClient()
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .single()
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle()
 
-  const { data: playerStats } = await supabase
-    .from("player_stats")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle()
+    const { data: playerStats } = await supabase
+      .from("player_stats")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle()
 
-  const { data: inventory } = await supabase
-    .from("inventory")
-    .select("*")
-    .eq("user_id", userId)
+    const { data: inventory } = await supabase
+      .from("inventory")
+      .select("*")
+      .eq("user_id", userId)
 
-  const { data: properties } = await supabase
-    .from("properties")
-    .select("*")
-    .eq("user_id", userId)
+    const { data: properties } = await supabase
+      .from("properties")
+      .select("*")
+      .eq("user_id", userId)
 
-  const { data: scores } = await supabase
-    .from("game_scores")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(50)
+    const { data: scores } = await supabase
+      .from("game_scores")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50)
 
-  const { data: raidStats } = await supabase
-    .from("raid_stats")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle()
+    const { data: raidStats } = await supabase
+      .from("raid_stats")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle()
 
-  return { 
-    profile, 
-    playerStats: playerStats || { level: 1, xp: 0, currency: 0, health: 100, stamina: 100, luck: 10, smaze: 2000 },
-    inventory: inventory || [],
-    properties: properties || [],
-    scores: scores || [],
-    raidStats: raidStats || { 
-      total_completed: 0, 
-      total_success: 0, 
-      total_failed: 0, 
-      best_time_seconds: null, 
-      total_xp_earned: 0, 
-      total_currency_earned: 0,
-      items_earned: []
+    return { 
+      profile: profile || null, 
+      playerStats: playerStats || { level: 1, xp: 0, currency: 0, health: 100, stamina: 100, luck: 10, smaze: 2000 },
+      inventory: inventory || [],
+      properties: properties || [],
+      scores: scores || [],
+      raidStats: raidStats || { 
+        total_completed: 0, 
+        total_success: 0, 
+        total_failed: 0, 
+        best_time_seconds: null, 
+        total_xp_earned: 0, 
+        total_currency_earned: 0,
+        items_earned: []
+      }
+    }
+  } catch (error) {
+    console.error('[v0] Error loading profile data:', error)
+    return { 
+      profile: null, 
+      playerStats: { level: 1, xp: 0, currency: 0, health: 100, stamina: 100, luck: 10, smaze: 2000 },
+      inventory: [],
+      properties: [],
+      scores: [],
+      raidStats: { 
+        total_completed: 0, 
+        total_success: 0, 
+        total_failed: 0, 
+        best_time_seconds: null, 
+        total_xp_earned: 0, 
+        total_currency_earned: 0,
+        items_earned: []
+      }
     }
   }
 }
@@ -277,17 +297,17 @@ export default async function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <ShoppingBag className="h-5 w-5 text-[#ff00ff]" />
-                    Inventář ({inventory.length} položek)
+                    Inventář ({inventory?.length || 0} položek)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {inventory.length === 0 ? (
+                  {(inventory?.length || 0) === 0 ? (
                     <p className="text-center text-muted-foreground py-8">
                       Tvůj inventář je prázdný. Začni hrát raidy a získej předměty!
                     </p>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {inventory.map((item) => (
+                      {(inventory || []).map((item) => (
                         <div
                           key={item.id}
                           className={`relative p-4 rounded-lg border-2 ${
@@ -322,11 +342,11 @@ export default async function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Home className="h-5 w-5 text-[#0088ff]" />
-                    Nemovitosti ({properties.length})
+                    Nemovitosti ({properties?.length || 0})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {properties.length === 0 ? (
+                  {(properties?.length || 0) === 0 ? (
                     <div className="text-center py-8">
                       <p className="text-muted-foreground mb-4">
                         Ještě nemáš žádné nemovitosti.
@@ -337,7 +357,7 @@ export default async function ProfilePage() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {properties.map((property) => (
+                      {(properties || []).map((property) => (
                         <div
                           key={property.id}
                           className="p-4 rounded-lg border border-border/50 bg-secondary/30"
@@ -378,7 +398,7 @@ export default async function ProfilePage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {scores.length === 0 ? (
+                  {(scores?.length || 0) === 0 ? (
                     <p className="text-center text-muted-foreground py-8">
                       Zatím žádná skóre. Začni hrát a sleduj svůj pokrok!
                     </p>
@@ -386,7 +406,7 @@ export default async function ProfilePage() {
                     <div className="space-y-4">
                       {/* Best Scores by Game */}
                       {Object.entries(
-                        scores.reduce((acc, score) => {
+                        (scores || []).reduce((acc, score) => {
                           if (!acc[score.game_id] || score.score > acc[score.game_id].score) {
                             acc[score.game_id] = score
                           }
