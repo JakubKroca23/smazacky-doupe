@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -17,13 +17,30 @@ export default function LoginPage() {
   const supabase = createClient()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Load remembered email on mount
+  useEffect(() => {
+    const remembered = localStorage.getItem('remembered_email')
+    if (remembered) {
+      setEmail(remembered)
+      setRememberMe(true)
+    }
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    // Save credentials if remember me is checked
+    if (rememberMe) {
+      localStorage.setItem('remembered_email', email)
+    } else {
+      localStorage.removeItem('remembered_email')
+    }
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -114,6 +131,19 @@ export default function LoginPage() {
                     className="pl-10 bg-input border-border focus:border-primary"
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="remember"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-border bg-input accent-primary cursor-pointer"
+                />
+                <Label htmlFor="remember" className="cursor-pointer text-sm font-normal text-muted-foreground">
+                  Pamatovat si mě
+                </Label>
               </div>
 
               <Button

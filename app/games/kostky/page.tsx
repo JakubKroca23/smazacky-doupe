@@ -367,13 +367,11 @@ export default function KostkyPage() {
   const sendChatMessage = async () => {
     if (!chatInput.trim() || !roomData) return
     
-    const newChat = { ...roomData.chat }
-    const msgId = Date.now().toString()
-    newChat[msgId] = { sender: myData.name, text: chatInput, time: Date.now() }
-    
+    const newChat = { ...roomData.chat, [Date.now()]: { sender: myData.name, text: chatInput, time: Date.now() } }
     const newData = { ...roomData, chat: newChat }
-    await broadcastUpdate(newData)
+    
     setChatInput('')
+    await broadcastUpdate(newData)
   }
 
   const startGame = async () => {
@@ -808,9 +806,13 @@ export default function KostkyPage() {
             </div>
           </div>
 
-          {myData.isHost && playersArray.length >= 1 && (
-            <button id="btn-start" style={{ width: '100%', marginTop: '15px', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }} onClick={startGame}>
-              ZACIT HRU ({playersArray.length} {playersArray.length === 1 ? 'hrac' : playersArray.length < 5 ? 'hraci' : 'hracu'})
+          {myData.isHost && (
+            <button 
+              id="btn-start" 
+              style={{ width: '100%', marginTop: '15px', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }} 
+              onClick={startGame}
+            >
+              ROZDAT FRČKA 🔥 ({playersArray.length} {playersArray.length === 1 ? 'hráč' : playersArray.length < 5 ? 'hráči' : 'hráčů'})
             </button>
           )}
           
