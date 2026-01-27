@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut, Trophy, Gamepad2, Calendar, Menu, X, Volume2, VolumeX } from "lucide-react"
+import { User, LogOut, Trophy, Gamepad2, Calendar, Menu, X, Volume2, VolumeX, Skull } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import { audioManager } from "@/lib/audio-manager"
 
@@ -61,6 +61,7 @@ export function Header() {
   const navItems = [
     { href: "/", label: "Hry", icon: Gamepad2 },
     { href: "/leaderboard", label: "Žebříček", icon: Trophy },
+    { href: "/raids", label: "Raidy", icon: Skull },
   ]
 
   return (
