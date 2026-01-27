@@ -21,7 +21,7 @@ async function getProfileData(userId: string) {
     .from("player_stats")
     .select("*")
     .eq("user_id", userId)
-    .single()
+    .maybeSingle()
 
   const { data: inventory } = await supabase
     .from("inventory")
@@ -105,12 +105,12 @@ export default async function ProfilePage() {
   const { profile, playerStats, inventory, properties, scores, raidStats } = await getProfileData(user.id)
 
   // Calculate stats
-  const totalGames = scores.length
-  const xpForNextLevel = getXPForLevel(playerStats.level + 1)
-  const xpProgress = (playerStats.xp / xpForNextLevel) * 100
+  const totalGames = scores?.length || 0
+  const xpForNextLevel = getXPForLevel((playerStats?.level || 1) + 1)
+  const xpProgress = ((playerStats?.xp || 0) / xpForNextLevel) * 100
 
   // Get equipped items
-  const equippedItems = inventory.filter(item => item.equipped)
+  const equippedItems = (inventory || []).filter(item => item.equipped)
 
   // Get avatar parts
   const equippedHead = equippedItems.find(i => i.item_slot === 'head')
@@ -159,7 +159,7 @@ export default async function ProfilePage() {
                     
                     {/* Level Badge */}
                     <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[#00ff00] text-black px-3 py-1 rounded-full font-bold text-sm shadow-lg" style={{ boxShadow: '0 0 20px #00ff00' }}>
-                      LVL {playerStats.level}
+                      LVL {playerStats?.level || 1}
                     </div>
                   </div>
                   
@@ -168,23 +168,23 @@ export default async function ProfilePage() {
                     <div>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-red-400">❤️ Health</span>
-                        <span>{playerStats.health}/100</span>
+                        <span>{playerStats?.health || 100}/100</span>
                       </div>
-                      <Progress value={playerStats.health} className="h-2 bg-red-900/30" />
+                      <Progress value={playerStats?.health || 100} className="h-2 bg-red-900/30" />
                     </div>
                     <div>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-blue-400">⚡ Stamina</span>
-                        <span>{playerStats.stamina}/100</span>
+                        <span>{playerStats?.stamina || 100}/100</span>
                       </div>
-                      <Progress value={playerStats.stamina} className="h-2 bg-blue-900/30" />
+                      <Progress value={playerStats?.stamina || 100} className="h-2 bg-blue-900/30" />
                     </div>
                     <div>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-yellow-400">🍀 Luck</span>
-                        <span>{playerStats.luck}%</span>
+                        <span>{playerStats?.luck || 10}%</span>
                       </div>
-                      <Progress value={playerStats.luck} max={100} className="h-2 bg-yellow-900/30" />
+                      <Progress value={playerStats?.luck || 10} max={100} className="h-2 bg-yellow-900/30" />
                     </div>
                   </div>
                 </div>
@@ -209,7 +209,7 @@ export default async function ProfilePage() {
                     <div className="flex gap-3">
                       <div className="flex items-center gap-1 bg-[#00ff00]/20 px-3 py-1.5 rounded-lg border border-[#00ff00]/50">
                         <Coins className="h-4 w-4 text-[#00ff00]" />
-                        <span className="font-bold text-[#00ff00]">{playerStats.currency.toLocaleString()}</span>
+                        <span className="font-bold text-[#00ff00]">{(playerStats?.currency || 0).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -218,7 +218,7 @@ export default async function ProfilePage() {
                   <div className="mb-4">
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-[#ff00ff]">Experience</span>
-                      <span className="text-muted-foreground">{playerStats.xp} / {xpForNextLevel} XP</span>
+                      <span className="text-muted-foreground">{playerStats?.xp || 0} / {xpForNextLevel} XP</span>
                     </div>
                     <Progress value={xpProgress} className="h-3 bg-secondary" />
                   </div>
@@ -238,7 +238,7 @@ export default async function ProfilePage() {
                         <ShoppingBag className="h-4 w-4 text-[#ff00ff]" />
                         <span className="text-xs text-muted-foreground">Inventář</span>
                       </div>
-                      <p className="text-xl font-bold">{inventory.length}</p>
+                      <p className="text-xl font-bold">{inventory?.length || 0}</p>
                     </div>
                     
                     <div className="bg-secondary/30 p-3 rounded-lg border border-border/50">
@@ -246,7 +246,7 @@ export default async function ProfilePage() {
                         <Home className="h-4 w-4 text-[#0088ff]" />
                         <span className="text-xs text-muted-foreground">Nemovitosti</span>
                       </div>
-                      <p className="text-xl font-bold">{properties.length}</p>
+                      <p className="text-xl font-bold">{properties?.length || 0}</p>
                     </div>
                     
                     <div className="bg-secondary/30 p-3 rounded-lg border border-border/50">
@@ -350,7 +350,7 @@ export default async function ProfilePage() {
                             <div className="text-right">
                               <p className="text-xs text-muted-foreground">Hodnota</p>
                               <p className="text-lg font-bold text-[#00ff00]">
-                                {property.value.toLocaleString()} 💰
+                                {(property?.value || 0).toLocaleString()} 💰
                               </p>
                             </div>
                           </div>
@@ -407,7 +407,7 @@ export default async function ProfilePage() {
                           </div>
                           <div className="text-right">
                             <p className="text-2xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00' }}>
-                              {score.score.toLocaleString("cs-CZ")}
+                              {(score?.score || 0).toLocaleString("cs-CZ")}
                             </p>
                             <p className="text-xs text-muted-foreground">body</p>
                           </div>
