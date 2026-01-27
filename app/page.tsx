@@ -14,6 +14,17 @@ const games = [
     hoverColor: "blue" as const,
   },
   {
+    id: "vybusena-kotatka",
+    title: "Vybušená Koťátka",
+    description: "Tahej karty a vyhni se bombě! Sbírej body a získávej speciální ochrany. Jak dlouho se vydrží?",
+    icon: "users" as const,
+    difficulty: "Střední" as const,
+    badge: "NOVÁ HRA!",
+    badgeColor: "pink" as const,
+    emoji: "💣",
+    hoverColor: "pink" as const,
+  },
+  {
     id: "conatosmazky",
     title: "Co na to Smažky?",
     description: "Uhodni nejčastější odpovědi spolubydlících. Čím víc lidí odpovědělo stejně, tím víc bodů!",
