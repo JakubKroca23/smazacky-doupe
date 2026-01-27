@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ProfileEditDialog } from "@/components/profile-edit-dialog"
+import { RaidStatistics } from "@/components/raid-statistics"
 
 async function getProfileData(userId: string) {
   const supabase = await createClient()
@@ -38,12 +40,27 @@ async function getProfileData(userId: string) {
     .order("created_at", { ascending: false })
     .limit(50)
 
+  const { data: raidStats } = await supabase
+    .from("raid_stats")
+    .select("*")
+    .eq("user_id", userId)
+    .single()
+
   return { 
     profile, 
     playerStats: playerStats || { level: 1, xp: 0, currency: 0, health: 100, stamina: 100, luck: 10 },
     inventory: inventory || [],
     properties: properties || [],
-    scores: scores || [] 
+    scores: scores || [],
+    raidStats: raidStats || { 
+      total_completed: 0, 
+      total_success: 0, 
+      total_failed: 0, 
+      best_time_seconds: null, 
+      total_xp_earned: 0, 
+      total_currency_earned: 0,
+      items_earned: []
+    }
   }
 }
 
@@ -85,7 +102,7 @@ export default async function ProfilePage() {
     redirect("/auth/login")
   }
 
-  const { profile, playerStats, inventory, properties, scores } = await getProfileData(user.id)
+  const { profile, playerStats, inventory, properties, scores, raidStats } = await getProfileData(user.id)
 
   // Calculate stats
   const totalGames = scores.length
@@ -106,6 +123,17 @@ export default async function ProfilePage() {
     year: "numeric",
   })
 
+  // Avatar customization
+  const avatarIcon = profile?.avatar_icon || '🎮'
+  const avatarCustomization = profile?.avatar_customization || {}
+  
+  const getBorderClass = () => {
+    if (!avatarCustomization.borderStyle || avatarCustomization.borderStyle === 'none') return ''
+    const width = avatarCustomization.borderStyle === 'double' ? 'border-4' : 'border-2'
+    const style = avatarCustomization.borderStyle === 'dashed' ? 'border-dashed' : 'border-solid'
+    return `${width} ${style} ${avatarCustomization.borderColor || 'border-[#00ff00]/50'}`
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Background */}
@@ -121,13 +149,10 @@ export default async function ProfilePage() {
                 {/* Avatar Section */}
                 <div className="flex flex-col items-center gap-3">
                   <div className="relative w-32 h-32">
-                    <div className="w-full h-full rounded-full bg-gradient-to-br from-[#00ff00]/20 to-[#ff00ff]/20 border-4 border-[#00ff00]/50 flex items-center justify-center overflow-hidden">
-                      {/* Simple Avatar Representation */}
-                      <div className="flex flex-col items-center justify-center text-center">
-                        <div className="text-2xl">{equippedHead?.item_name || '😎'}</div>
-                        <div className="text-3xl">{equippedBody?.item_name || '🧥'}</div>
-                        <div className="text-xl">{equippedLegs?.item_name || '👖'}</div>
-                        <div className="text-sm">{equippedFeet?.item_name || '👟'}</div>
+                    <div className={`w-full h-full rounded-full ${avatarCustomization.backgroundColor || 'bg-gradient-to-br from-[#00ff00]/20 to-[#ff00ff]/20'} ${getBorderClass()} flex items-center justify-center overflow-hidden`}>
+                      {/* Customizable Avatar Icon */}
+                      <div className="text-6xl">
+                        {avatarIcon}
                       </div>
                     </div>
                     <div className="absolute -inset-2 bg-[#00ff00]/20 rounded-full blur-xl -z-10 animate-pulse" />
@@ -167,12 +192,18 @@ export default async function ProfilePage() {
                 {/* Info Section */}
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-4">
-                    <div>
+                    <div className="flex-1">
                       <h1 className="text-3xl font-bold text-[#00ff00] mb-1" style={{ textShadow: '0 0 10px #00ff00' }}>
                         {profile?.display_name || user.email?.split("@")[0] || "Hráč"}
                       </h1>
                       <p className="text-sm text-muted-foreground">{user.email}</p>
                     </div>
+                    
+                    <ProfileEditDialog 
+                      currentDisplayName={profile?.display_name || user.email?.split("@")[0] || "Hráč"}
+                      currentIcon={avatarIcon}
+                      currentCustomization={avatarCustomization}
+                    />
                     
                     {/* Currency Display */}
                     <div className="flex gap-3">
@@ -233,10 +264,11 @@ export default async function ProfilePage() {
 
           {/* Tabbed Content */}
           <Tabs defaultValue="inventory" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-4 mb-6">
               <TabsTrigger value="inventory">Inventář</TabsTrigger>
               <TabsTrigger value="properties">Nemovitosti</TabsTrigger>
               <TabsTrigger value="stats">Statistiky</TabsTrigger>
+              <TabsTrigger value="raids">Raidy</TabsTrigger>
             </TabsList>
 
             {/* Inventory Tab */}
@@ -385,6 +417,11 @@ export default async function ProfilePage() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Raids Tab */}
+            <TabsContent value="raids">
+              <RaidStatistics stats={raidStats} />
             </TabsContent>
           </Tabs>
         </div>
