@@ -205,12 +205,17 @@ export default function KostkyPage() {
   useEffect(() => {
     if (!myData.room) return
 
+    console.log("[v0] Setting up channel for room:", myData.room)
+
     const channel = supabase
       .channel(`kostky-room-${myData.room}`)
       .on('broadcast', { event: 'room-update' }, ({ payload }) => {
+        console.log("[v0] Received broadcast update:", payload)
         setRoomData(payload as RoomData)
       })
-      .subscribe()
+      .subscribe((status) => {
+        console.log("[v0] Channel subscription status:", status)
+      })
 
     channelRef.current = channel
 
@@ -218,11 +223,12 @@ export default function KostkyPage() {
     fetchRoomData()
 
     return () => {
+      console.log("[v0] Cleaning up channel for room:", myData.room)
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
       }
     }
-  }, [myData.room])
+  }, [myData.room, supabase])
 
   // Sync UI based on room data
   useEffect(() => {
@@ -261,17 +267,26 @@ export default function KostkyPage() {
   }
 
   const broadcastUpdate = async (newData: RoomData) => {
-    await supabase
+    console.log("[v0] broadcastUpdate - room:", myData.room, "status:", newData.status, "chatMessages:", Object.keys(newData.chat || {}).length)
+    
+    const { error } = await supabase
       .from('kostky_rooms')
       .update({ room_data: newData })
       .eq('id', myData.room)
+    
+    if (error) {
+      console.error("[v0] Database update error:", error)
+    }
 
     if (channelRef.current) {
+      console.log("[v0] Broadcasting via channel...")
       channelRef.current.send({
         type: 'broadcast',
         event: 'room-update',
         payload: newData
       })
+    } else {
+      console.log("[v0] No channel available for broadcast")
     }
   }
 
@@ -365,18 +380,26 @@ export default function KostkyPage() {
   }
 
   const sendChatMessage = async () => {
+    console.log("[v0] sendChatMessage - chatInput:", chatInput, "roomData:", !!roomData, "myData.name:", myData.name)
     if (!chatInput.trim() || !roomData) return
     
-    const newChat = { ...roomData.chat, [Date.now()]: { sender: myData.name, text: chatInput, time: Date.now() } }
+    const msgId = Date.now().toString()
+    const newChat = { ...roomData.chat, [msgId]: { sender: myData.name, text: chatInput, time: Date.now() } }
     const newData = { ...roomData, chat: newChat }
     
+    console.log("[v0] New chat message:", newChat[msgId], "Total messages:", Object.keys(newChat).length)
     setChatInput('')
     await broadcastUpdate(newData)
   }
 
   const startGame = async () => {
-    if (!roomData || !myData.isHost) return
+    console.log("[v0] startGame - roomData:", !!roomData, "myData.isHost:", myData.isHost, "playersCount:", playersArray.length)
+    if (!roomData || !myData.isHost) {
+      console.log("[v0] startGame blocked - missing roomData or not host")
+      return
+    }
     
+    console.log("[v0] Starting game...")
     const newData = { ...roomData, status: 'playing' as const }
     await broadcastUpdate(newData)
   }
