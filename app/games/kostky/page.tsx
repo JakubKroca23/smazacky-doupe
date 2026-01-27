@@ -605,20 +605,6 @@ export default function KostkyPage() {
     const newData = { ...roomData, state: newState }
     await broadcastUpdate(newData)
   }
-    
-    if (isRushActive) addedPoints *= 2
-    
-    const newState = {
-      ...state,
-      lastDice: dice,
-      storedDice: stored,
-      turnBasePoints: state.turnBasePoints + addedPoints,
-      hasTakenThisRoll: true
-    }
-    
-    const newData = { ...roomData, state: newState }
-    await broadcastUpdate(newData)
-  }
 
   // Bank points
   const bankPoints = async () => {
