@@ -12,15 +12,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { User, LogOut, Trophy, Gamepad2, Calendar, Menu, X } from "lucide-react"
+import { User, LogOut, Trophy, Gamepad2, Calendar, Menu, X, Volume2, VolumeX, Skull } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
+import { audioManager } from "@/lib/audio-manager"
 
 export function Header() {
   const pathname = usePathname()
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
   const supabase = createClient()
+
+  useEffect(() => {
+    // Load mute state from localStorage
+    const saved = localStorage.getItem('audio_muted')
+    setIsMuted(saved === 'true')
+  }, [])
 
   useEffect(() => {
     const getUser = async () => {
@@ -43,23 +51,28 @@ export function Header() {
     window.location.href = "/"
   }
 
+  const toggleAudio = () => {
+    audioManager.toggleMute()
+    const newMuted = !isMuted
+    setIsMuted(newMuted)
+    audioManager.playSound('click')
+  }
+
   const navItems = [
     { href: "/", label: "Hry", icon: Gamepad2 },
     { href: "/leaderboard", label: "Žebříček", icon: Trophy },
-    { href: "/events", label: "Akce", icon: Calendar },
+    { href: "/raids", label: "Raidy", icon: Skull },
   ]
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur-xl shadow-lg">
+      <div className="container mx-auto flex h-12 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="relative">
-            <Gamepad2 className="h-8 w-8 text-primary neon-text transition-all group-hover:scale-110" />
-            <div className="absolute inset-0 blur-lg bg-primary/30 -z-10" />
-          </div>
-          <span className="text-xl font-bold tracking-wider text-foreground neon-text hidden sm:block">
-            SMAŽÁCKÝ<span className="text-primary"> DOUPĚ</span>
+          <Gamepad2 className="h-6 w-6 text-[#00ff00] transition-all group-hover:scale-110" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
+          <span className="text-base font-bold tracking-wider hidden sm:block">
+            <span className="text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>SMAŽÁCKÝ</span>
+            <span className="text-[#ff00ff]" style={{ textShadow: '0 0 10px #ff00ff, 0 0 20px #ff00ff' }}> DOUPĚ</span>
           </span>
         </Link>
 
@@ -72,13 +85,13 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   isActive
-                    ? "bg-primary/20 text-primary neon-border"
+                    ? "bg-primary/20 text-primary"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
                 {item.label}
               </Link>
             )
@@ -87,6 +100,17 @@ export function Header() {
 
         {/* Auth Section */}
         <div className="flex items-center gap-3">
+          {/* Audio Toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleAudio}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            aria-label={isMuted ? "Zapnout zvuk" : "Vypnout zvuk"}
+          >
+            {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
+          
           {loading ? (
             <div className="h-9 w-20 bg-secondary/50 rounded-lg animate-pulse" />
           ) : user ? (
@@ -94,10 +118,11 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="border-primary/50 hover:border-primary hover:bg-primary/10 gap-2 bg-transparent"
+                  size="sm"
+                  className="border-primary/50 hover:border-primary hover:bg-primary/10 gap-1.5 bg-transparent h-8 text-xs"
                 >
-                  <User className="h-4 w-4" />
-                  <span className="hidden sm:inline max-w-24 truncate">
+                  <User className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline max-w-20 truncate">
                     {user.email?.split("@")[0]}
                   </span>
                 </Button>
@@ -126,14 +151,14 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Link href="/auth/login">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground h-8 text-xs">
                   Přihlásit
                 </Button>
               </Link>
               <Link href="/auth/sign-up">
-                <Button size="sm" className="bg-primary hover:bg-primary/90 neon-glow">
+                <Button size="sm" className="bg-primary hover:bg-primary/90 h-8 text-xs">
                   Registrace
                 </Button>
               </Link>

@@ -3,39 +3,44 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Dark Violet Neon Gaming Theme */
+/* Smažácký Doupě - Neon Gaming Theme */
 :root {
-  --background: oklch(0.08 0.02 285);
-  --foreground: oklch(0.95 0.02 285);
-  --card: oklch(0.12 0.03 285);
-  --card-foreground: oklch(0.95 0.02 285);
-  --popover: oklch(0.1 0.025 285);
-  --popover-foreground: oklch(0.95 0.02 285);
-  --primary: oklch(0.7 0.25 290);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.18 0.04 285);
-  --secondary-foreground: oklch(0.9 0.02 285);
-  --muted: oklch(0.15 0.03 285);
-  --muted-foreground: oklch(0.6 0.05 285);
-  --accent: oklch(0.65 0.28 320);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.25 0.06 285);
-  --input: oklch(0.15 0.04 285);
-  --ring: oklch(0.7 0.25 290);
-  --chart-1: oklch(0.7 0.25 290);
-  --chart-2: oklch(0.65 0.28 320);
-  --chart-3: oklch(0.7 0.2 180);
-  --chart-4: oklch(0.75 0.15 60);
-  --chart-5: oklch(0.6 0.2 350);
-  --radius: 0.75rem; /* User's radius preserved */
-  --neon-glow: oklch(0.7 0.25 290);
-  --neon-pink: oklch(0.65 0.28 320);
-  --neon-cyan: oklch(0.7 0.2 180);
-  --success: oklch(0.65 0.2 145);
-  --success-foreground: oklch(0.98 0 0);
-  /* Added Shadcn UI sidebar variables */
+  /* Neon colors from template */
+  --neon-green: #00ff00;
+  --neon-pink: #ff00ff;
+  --neon-blue: #0088ff;
+  --neon-badtrip: #ff0055;
+  --dark-bg: #050505;
+  
+  /* Theme colors - Neon themed */
+  --background: #050505;
+  --foreground: #ffffff;
+  --card: rgba(255, 255, 255, 0.03);
+  --card-foreground: #ffffff;
+  --popover: rgba(0, 0, 0, 0.9);
+  --popover-foreground: #ffffff;
+  --primary: #00ff00;
+  --primary-foreground: #000000;
+  --secondary: #222222;
+  --secondary-foreground: #ffffff;
+  --muted: #333333;
+  --muted-foreground: #999999;
+  --accent: #ff00ff;
+  --accent-foreground: #000000;
+  --destructive: #ff0055;
+  --destructive-foreground: #ffffff;
+  --border: #222222;
+  --input: #111111;
+  --ring: #00ff00;
+  --radius: 0.75rem;
+  --success: #00ff00;
+
+  /* Chart colors - neon themed */
+  --chart-1: #00ff00;
+  --chart-2: #ff00ff;
+  --chart-3: #0088ff;
+  --chart-4: #00ff00;
+  --chart-5: #ff00ff;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -82,8 +87,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Orbitron', 'Geist', sans-serif;
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: 'Courier New', Courier, monospace;
+  --font-mono: 'Courier New', Courier, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -108,16 +113,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --color-neon-glow: var(--neon-glow);
-  --color-neon-pink: var(--neon-pink);
-  --color-neon-cyan: var(--neon-cyan);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  /* Added Shadcn UI sidebar variables to theme */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -134,43 +133,119 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Courier New', Courier, monospace; /* Preserve existing font-family */
   }
 }
 
+/* Particle canvas */
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Main flicker animation */
+@keyframes main-flicker {
+  0%, 19.99%, 22%, 62.99%, 64%, 64.99%, 70%, 100% {
+    opacity: 1;
+  }
+  20%, 21.99%, 63%, 63.99%, 65%, 69.99% {
+    opacity: 0.4;
+  }
+}
+
+.animate-main-flicker {
+  animation: main-flicker 4s infinite step-end;
+}
+
+/* Slogan slow vibe animation */
+@keyframes slogan-slow-vibe {
+  from {
+    transform: rotate(-12deg) scale(1) translateY(0);
+    filter: brightness(1);
+  }
+  to {
+    transform: rotate(-10deg) scale(1.03) translateY(8px);
+    filter: brightness(1.2);
+  }
+}
+
+.animate-slogan-vibe {
+  animation: slogan-slow-vibe 2.5s ease-in-out infinite alternate, main-flicker 5s infinite step-end;
+}
+
+/* Flash green animation */
+@keyframes flash-green {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.6;
+  }
+}
+
+.animate-flash-green {
+  animation: flash-green 0.2s infinite alternate;
+}
+
+/* Shake animation for errors */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-10px);
+  }
+  75% {
+    transform: translateX(10px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s;
+}
+
 /* Neon glow effects */
-.neon-glow {
-  box-shadow:
-    0 0 5px var(--neon-glow),
-    0 0 10px var(--neon-glow),
-    0 0 20px var(--neon-glow),
-    0 0 40px var(--neon-glow);
+.neon-glow-blue {
+  box-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue), 0 0 40px var(--neon-blue);
 }
 
-.neon-text {
-  text-shadow:
-    0 0 5px var(--neon-glow),
-    0 0 10px var(--neon-glow),
-    0 0 20px var(--neon-glow);
+.neon-glow-green {
+  box-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green), 0 0 40px var(--neon-green);
 }
 
-.neon-border {
-  box-shadow:
-    0 0 5px var(--neon-glow),
-    inset 0 0 5px var(--neon-glow);
+.neon-glow-pink {
+  box-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink), 0 0 40px var(--neon-pink);
 }
 
-.neon-pink-glow {
-  box-shadow:
-    0 0 5px var(--neon-pink),
-    0 0 10px var(--neon-pink),
-    0 0 20px var(--neon-pink);
+.neon-glow-badtrip {
+  box-shadow: 0 0 10px var(--neon-badtrip), 0 0 20px var(--neon-badtrip), 0 0 40px var(--neon-badtrip);
 }
 
-.neon-cyan-glow {
-  box-shadow:
-    0 0 5px var(--neon-cyan),
-    0 0 10px var(--neon-cyan),
-    0 0 20px var(--neon-cyan);
+/* Text shadows */
+.neon-text-blue {
+  color: var(--neon-blue);
+  text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+}
+
+.neon-text-green {
+  color: var(--neon-green);
+  text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
+}
+
+.neon-text-pink {
+  color: var(--neon-pink);
+  text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink), 0 0 40px var(--neon-badtrip), 4px 4px 0px #000;
+}
+
+.neon-text-badtrip {
+  color: var(--neon-badtrip);
+  text-shadow: 0 0 10px var(--neon-badtrip), 0 0 20px var(--neon-badtrip);
 }
 
 /* Scrollbar styling */
@@ -192,31 +267,22 @@
   background: var(--primary);
 }
 
-/* Animation utilities */
-@keyframes pulse-neon {
-  0%, 100% {
-    opacity: 1;
-    filter: brightness(1);
-  }
-  50% {
-    opacity: 0.8;
-    filter: brightness(1.2);
-  }
+/* Backdrop blur for glass effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
 }
 
-.animate-pulse-neon {
-  animation: pulse-neon 2s ease-in-out infinite;
+/* Legacy neon classes for compatibility */
+.neon-glow {
+  box-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green), 0 0 40px var(--neon-green);
 }
 
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+.neon-text {
+  text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
 }
 
-.animate-float {
-  animation: float 3s ease-in-out infinite;
+.neon-border {
+  border-color: var(--neon-green);
+  box-shadow: 0 0 10px var(--neon-green);
 }

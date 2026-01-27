@@ -17,86 +17,86 @@ const PRIZE_LEVELS = [
 
 const QUESTIONS = [
   {
-    question: "Co je hlavní ingredience v perníku?",
-    options: ["Med", "Cukr", "Sůl", "Ocet"],
+    question: "Co je typické pro ostravskou smažku?",
+    options: ["Hluk v noci", "Čistota", "Ticho", "Ranní vstávání"],
     correct: 0,
   },
   {
-    question: "Kolik má rok měsíců?",
-    options: ["10", "11", "12", "13"],
-    correct: 2,
-  },
-  {
-    question: "Jaké je hlavní město České republiky?",
-    options: ["Brno", "Ostrava", "Plzeň", "Praha"],
+    question: "Kolik piv vydrží průměrná smažka za večer?",
+    options: ["1-2", "3-5", "6-10", "Nepočítá je"],
     correct: 3,
   },
   {
-    question: "Kolik nohou má pavouk?",
-    options: ["4", "6", "8", "10"],
+    question: "Kde se vyrábí nejlepší perník v Ostravě?",
+    options: ["V pekárně", "Na kolejích", "U feťáka", "V pernikárně"],
+    correct: 3,
+  },
+  {
+    question: "Co dělá vařič pika?",
+    options: ["Kávu", "Čaj", "Pervitin", "Polévku"],
     correct: 2,
   },
   {
-    question: "Jakou barvu má banán když je zralý?",
-    options: ["Zelená", "Červená", "Žlutá", "Modrá"],
-    correct: 2,
-  },
-  {
-    question: "Kdo napsal Babičku?",
-    options: ["Karel Čapek", "Božena Němcová", "Jaroslav Hašek", "Franz Kafka"],
+    question: "Jaká je nejoblíbenější ulice v Ostravě?",
+    options: ["Hlavní", "Stodolní", "Nádražní", "Školní"],
     correct: 1,
   },
   {
-    question: "Kolik planet má naše sluneční soustava?",
-    options: ["7", "8", "9", "10"],
+    question: "Co si smažka nejčastěji objedná?",
+    options: ["Salát", "Smažák", "Sushi", "Ovesnou kaši"],
     correct: 1,
   },
   {
-    question: "V jakém roce padla Berlínská zeď?",
-    options: ["1987", "1989", "1991", "1993"],
+    question: "Kdy smažka chodí spát?",
+    options: ["21:00", "23:00", "01:00", "Až ráno"],
+    correct: 3,
+  },
+  {
+    question: "Co je v Ostravě všude?",
+    options: ["Stromy", "Uhlí", "Kavárny", "Kola"],
     correct: 1,
   },
   {
-    question: "Který prvek má chemickou značku 'Au'?",
-    options: ["Stříbro", "Měď", "Zlato", "Železo"],
-    correct: 2,
+    question: "Jaký je ostravský pozdrav?",
+    options: ["Ahoj", "Čau", "Nazdar", "Hej ty"],
+    correct: 3,
   },
   {
-    question: "Kolik strun má klasická kytara?",
-    options: ["4", "5", "6", "7"],
-    correct: 2,
+    question: "Co smažka studuje nejméně?",
+    options: ["Ráno", "Odpoledne", "Večer", "Vůbec"],
+    correct: 3,
   },
   {
-    question: "Která planeta je nejblíže Slunci?",
-    options: ["Venuše", "Merkur", "Země", "Mars"],
+    question: "Kde feťák skrývá svou várku?",
+    options: ["V bance", "Pod postelí", "V lednici", "U babičky"],
     correct: 1,
   },
   {
-    question: "Kdo je autorem Mony Lisy?",
-    options: ["Michelangelo", "Raphael", "Leonardo da Vinci", "Donatello"],
-    correct: 2,
+    question: "Kolik perníků snědí smažka denně?",
+    options: ["0", "1-2", "3-5", "Kilo"],
+    correct: 0,
   },
   {
-    question: "Jaký je nejvyšší vodopád na světě?",
-    options: ["Niagara", "Angel", "Victoria", "Iguazu"],
+    question: "Co je nejdůležitější na kolejích?",
+    options: ["Studium", "Parta", "Klid", "Čistota"],
     correct: 1,
   },
   {
-    question: "V jakém roce proběhla sametová revoluce?",
-    options: ["1985", "1987", "1989", "1991"],
-    correct: 2,
+    question: "Jaký je nejlepší čas na piko?",
+    options: ["Ráno", "Odpoledne", "Večer", "Vždy"],
+    correct: 3,
   },
   {
-    question: "Jak se jmenuje největší orgán lidského těla?",
-    options: ["Srdce", "Játra", "Kůže", "Plíce"],
-    correct: 2,
+    question: "Co znamená 'jít na jedno'?",
+    options: ["Jedno pivo", "Celou noc", "Domů brzo", "Na kafe"],
+    correct: 1,
   },
 ]
 
 const LIFELINES = {
   fifty: { name: "50:50", icon: HelpCircle, description: "Odstraní 2 špatné odpovědi" },
-  phone: { name: "Telefon", icon: PhoneCall, description: "Zavolej spolubydlícímu" },
-  audience: { name: "Publikum", icon: Users, description: "Zeptej se publika" },
+  phone: { name: "Feťák volá", icon: PhoneCall, description: "Zavolej feťákovi" },
+  audience: { name: "Smažky", icon: Users, description: "Zeptej se smažek" },
 }
 
 export default function PernikarPage() {
@@ -113,9 +113,26 @@ export default function PernikarPage() {
   const [audienceVotes, setAudienceVotes] = useState<number[] | null>(null)
   const supabase = createClient()
 
+  // Ensure all hooks are called at the top level
+  const [isFiftyFiftyUsed, setIsFiftyFiftyUsed] = useState(false)
+  const [isPhoneUsed, setIsPhoneUsed] = useState(false)
+  const [isAudienceUsed, setIsAudienceUsed] = useState(false)
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
   }, [supabase.auth])
+
+  useEffect(() => {
+    useFiftyFifty()
+  }, [isFiftyFiftyUsed])
+
+  useEffect(() => {
+    usePhone()
+  }, [isPhoneUsed])
+
+  useEffect(() => {
+    useAudience()
+  }, [isAudienceUsed])
 
   const saveScore = async (score: number) => {
     if (!user) return
@@ -166,7 +183,7 @@ export default function PernikarPage() {
   }
 
   const useFiftyFifty = () => {
-    if (!lifelines.fifty) return
+    if (!lifelines.fifty || !isFiftyFiftyUsed) return
     setLifelines(prev => ({ ...prev, fifty: false }))
     
     const wrongOptions = question.options
@@ -175,22 +192,24 @@ export default function PernikarPage() {
     
     const toHide = wrongOptions.sort(() => Math.random() - 0.5).slice(0, 2)
     setHiddenOptions(toHide)
+    setIsFiftyFiftyUsed(false)
   }
 
   const usePhone = () => {
-    if (!lifelines.phone) return
+    if (!lifelines.phone || !isPhoneUsed) return
     setLifelines(prev => ({ ...prev, phone: false }))
     
     const hints = [
-      `Hmm, myslím že to je ${question.options[question.correct]}!`,
-      `Nejsem si úplně jistý, ale řekl bych ${question.options[question.correct]}.`,
-      `Jasně! To musí být ${question.options[question.correct]}, ne?`,
+      `Brácho, to je ${question.options[question.correct]}! Věř mi!`,
+      `Tak tohle je jasný, že ${question.options[question.correct]}, ne?`,
+      `Hmm, myslím že ${question.options[question.correct]}... nebo ne? Nevím, jsem zfetovanej.`,
     ]
     setPhoneHint(hints[Math.floor(Math.random() * hints.length)])
+    setIsPhoneUsed(false)
   }
 
   const useAudience = () => {
-    if (!lifelines.audience) return
+    if (!lifelines.audience || !isAudienceUsed) return
     setLifelines(prev => ({ ...prev, audience: false }))
     
     const votes = question.options.map((_, i) => {
@@ -199,6 +218,7 @@ export default function PernikarPage() {
     })
     const total = votes.reduce((a, b) => a + b, 0)
     setAudienceVotes(votes.map(v => Math.round((v / total) * 100)))
+    setIsAudienceUsed(false)
   }
 
   const resetGame = () => {
@@ -221,15 +241,15 @@ export default function PernikarPage() {
   }
 
   const handleLifelineClick = (key: keyof typeof LIFELINES) => {
-    if (key === "fifty") useFiftyFifty()
-    if (key === "phone") usePhone()
-    if (key === "audience") useAudience()
+    if (key === "fifty") setIsFiftyFiftyUsed(true)
+    if (key === "phone") setIsPhoneUsed(true)
+    if (key === "audience") setIsAudienceUsed(true)
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
-      <div className="fixed top-40 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#00ff00]/5 via-background to-background -z-10" />
+      <div className="fixed top-40 right-1/4 w-96 h-96 bg-[#ff00ff]/10 rounded-full blur-3xl -z-10" />
 
       <header className="p-4 border-b border-border/50">
         <div className="container mx-auto flex items-center justify-between">
@@ -238,8 +258,8 @@ export default function PernikarPage() {
             Zpět
           </Link>
           <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-chart-4" />
-            <span className="font-bold text-chart-4">{currentPrize.toLocaleString()} perníků</span>
+            <Trophy className="h-5 w-5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
+            <span className="font-bold text-[#00ff00]" style={{ textShadow: '0 0 5px #00ff00' }}>{currentPrize.toLocaleString()} perníků</span>
           </div>
         </div>
       </header>
@@ -388,9 +408,10 @@ export default function PernikarPage() {
               {won ? (
                 <>
                   <Sparkles className="h-16 w-16 text-chart-4 mx-auto mb-4" />
-                  <h2 className="text-3xl font-bold text-foreground mb-2">VYHRÁVÁŠ!</h2>
+                  <h2 className="text-3xl font-bold text-foreground mb-2">VYHRÁVŠE!</h2>
                   <p className="text-5xl font-bold text-chart-4 neon-text mb-2">1,000,000</p>
                   <p className="text-xl text-chart-4 mb-6">perníků!</p>
+                  <p className="text-muted-foreground mb-4">Jsi pravá ostravská smažka!</p>
                 </>
               ) : (
                 <>

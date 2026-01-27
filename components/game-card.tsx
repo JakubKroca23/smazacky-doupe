@@ -1,9 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Users, Dices, UsersRound, Trophy, Split as Slot } from "lucide-react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 interface GameCardProps {
   id: string
@@ -11,73 +10,98 @@ interface GameCardProps {
   description: string
   icon: "dice" | "users" | "slot" | "trophy"
   difficulty: "Lehká" | "Střední" | "Těžká"
-  playersOnline?: number
-  highScore?: number
+  badge?: string
+  badgeColor?: "blue" | "green" | "pink" | "badtrip"
+  emoji?: string
+  hoverColor?: "blue" | "green" | "pink" | "badtrip"
 }
 
-const iconMap = {
-  dice: Dices,
-  users: UsersRound,
-  slot: Slot,
-  trophy: Trophy,
+const badgeColorMap = {
+  blue: "bg-[#0088ff] text-black",
+  green: "bg-[#00ff00] text-black",
+  pink: "bg-[#ff00ff] text-black",
+  badtrip: "bg-[#ff0055] text-white",
 }
 
-const difficultyColors = {
-  "Lehká": "bg-success/20 text-success border-success/50",
-  "Střední": "bg-chart-4/20 text-chart-4 border-chart-4/50",
-  "Těžká": "bg-destructive/20 text-destructive border-destructive/50",
+const hoverColorMap = {
+  blue: "hover:border-[#0088ff] hover:neon-glow-blue",
+  green: "hover:border-[#00ff00] hover:neon-glow-green",
+  pink: "hover:border-[#ff00ff] hover:neon-glow-pink",
+  badtrip: "hover:border-[#ff0055] hover:neon-glow-badtrip",
 }
 
 export function GameCard({
   id,
   title,
   description,
-  icon,
   difficulty,
-  playersOnline = 0,
-  highScore,
+  badge,
+  badgeColor = "blue",
+  emoji = "🎮",
+  hoverColor = "blue",
 }: GameCardProps) {
-  const Icon = iconMap[icon]
+  const [playersOnline, setPlayersOnline] = useState(0)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const channel = supabase.channel(`game-${id}`)
+    
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState()
+        const count = Object.keys(state).length
+        setPlayersOnline(count)
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            viewing: true,
+            user_id: Math.random().toString(36).substring(7),
+            timestamp: new Date().toISOString(),
+          })
+        }
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [id, supabase])
 
   return (
     <Link href={`/games/${id}`}>
-      <Card className="group relative overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 cursor-pointer h-full">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div
+        className={`glass-effect border-2 border-[#222] rounded-[15px] p-8 text-center text-white transition-all duration-300 cursor-pointer relative flex flex-col hover:translate-y-[-10px] ${hoverColorMap[hoverColor]}`}
+      >
+        {/* Badge like "NASYPANÁ NOVINKA" */}
+        {badge && badge === "NASYPANÁ NOVINKA" && (
+          <div className="absolute top-[-15px] right-[-25px] bg-[#00ff00] text-black px-8 py-2 text-lg font-black rotate-[15deg] shadow-[0_0_20px_#00ff00] z-[100] animate-flash-green">
+            {badge}
+          </div>
+        )}
         
-        <CardContent className="p-6 relative">
-          <div className="flex items-start justify-between mb-4">
-            <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 group-hover:neon-border transition-all">
-              <Icon className="h-8 w-8 text-primary" />
-            </div>
-            <Badge variant="outline" className={difficultyColors[difficulty]}>
-              {difficulty}
-            </Badge>
+        {/* Regular badge (top left) */}
+        {badge && badge !== "NASYPANÁ NOVINKA" && (
+          <div className={`absolute top-[15px] left-[15px] ${badgeColorMap[badgeColor]} px-2 py-0.5 text-[0.6em] font-bold rounded-[10px]`}>
+            {badge}
           </div>
+        )}
 
-          <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
-            {title}
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-            {description}
-          </p>
+        {/* Emoji Icon */}
+        <div className="text-6xl mb-2">{emoji}</div>
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-success" />
-              <span>{playersOnline} online</span>
-            </div>
-            {highScore !== undefined && (
-              <div className="flex items-center gap-1.5">
-                <Trophy className="h-3.5 w-3.5 text-chart-4" />
-                <span>Rekord: {highScore.toLocaleString()}</span>
-              </div>
-            )}
-          </div>
-        </CardContent>
+        {/* Title */}
+        <div className="text-xl font-bold uppercase mb-2">{title}</div>
 
-        {/* Hover glow effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-xl opacity-0 group-hover:opacity-100 blur-xl transition-opacity -z-10" />
-      </Card>
+        {/* Description */}
+        <div className="text-sm text-muted-foreground mb-4 flex-grow">
+          {description}
+        </div>
+
+        {/* Players online */}
+        <div className="text-xs text-muted-foreground">
+          👥 {playersOnline} hráčů online
+        </div>
+      </div>
     </Link>
   )
 }

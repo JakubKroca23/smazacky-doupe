@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Header } from "@/components/header"
 import { EventCard } from "@/components/event-card"
 import { LiveActivity } from "@/components/live-activity"
 import { Calendar, Sparkles, Clock } from "lucide-react"
@@ -56,8 +55,6 @@ export default async function EventsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      
       {/* Background */}
       <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
       <div className="fixed top-40 left-1/3 w-96 h-96 bg-accent/10 rounded-full blur-3xl -z-10" />

@@ -155,8 +155,8 @@ export default function PuzzleGame() {
   return (
     <div className="min-h-screen bg-background">
       {/* Background */}
-      <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
-      <div className="fixed top-20 right-1/4 w-96 h-96 bg-neon-cyan/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#0088ff]/5 via-background to-background -z-10" />
+      <div className="fixed top-20 right-1/4 w-96 h-96 bg-[#0088ff]/10 rounded-full blur-3xl -z-10" />
 
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -170,8 +170,8 @@ export default function PuzzleGame() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <Puzzle className="h-5 w-5 text-neon-cyan" />
-            <span className="font-bold text-lg">Grid Logic</span>
+            <Puzzle className="h-5 w-5 text-[#0088ff]" style={{ filter: 'drop-shadow(0 0 5px #0088ff)' }} />
+            <span className="font-bold text-lg text-[#0088ff]" style={{ textShadow: '0 0 5px #0088ff' }}>Grid Logic</span>
           </div>
 
           <Button variant="ghost" size="sm" onClick={resetGame} className="gap-2">
@@ -185,12 +185,12 @@ export default function PuzzleGame() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-wrap items-center justify-center gap-4">
           <Badge variant="outline" className="bg-secondary/50 gap-2 px-3 py-1.5">
-            <Clock className="h-3.5 w-3.5 text-primary" />
-            {formatTime(time)}
+            <Clock className="h-3.5 w-3.5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
+            <span className="text-[#00ff00]">{formatTime(time)}</span>
           </Badge>
           <Badge variant="outline" className="bg-secondary/50 gap-2 px-3 py-1.5">
-            <Puzzle className="h-3.5 w-3.5 text-neon-cyan" />
-            {moves} moves
+            <Puzzle className="h-3.5 w-3.5 text-[#0088ff]" style={{ filter: 'drop-shadow(0 0 5px #0088ff)' }} />
+            <span className="text-[#0088ff]">{moves} moves</span>
           </Badge>
           {highScore && (
             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 gap-2 px-3 py-1.5">
@@ -214,12 +214,12 @@ export default function PuzzleGame() {
                   tile === null
                     ? "bg-transparent"
                     : "bg-card border-2 border-border hover:border-primary/50 hover:bg-card/80 cursor-pointer active:scale-95"
-                } ${tile === index + 1 ? "border-success/50" : ""}`}
+                } ${tile === index + 1 ? "border-[#00ff00]/50" : ""}`}
               >
                 {tile !== null && (
                   <span className={`text-xl sm:text-2xl font-bold ${
-                    tile === index + 1 ? "text-success" : "text-foreground"
-                  }`}>
+                    tile === index + 1 ? "text-[#00ff00]" : "text-foreground"
+                  }`} style={tile === index + 1 ? { textShadow: '0 0 5px #00ff00' } : {}}>
                     {tile}
                   </span>
                 )}
@@ -235,17 +235,17 @@ export default function PuzzleGame() {
         {/* Game Won Modal */}
         {gameWon && (
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-sm border-success/50 bg-card">
+            <Card className="w-full max-w-sm border-[#00ff00]/50 bg-card">
               <CardContent className="p-6 text-center space-y-4">
                 <div className="relative inline-block">
-                  <Check className="h-16 w-16 text-success mx-auto" />
-                  <div className="absolute inset-0 blur-lg bg-success/30 -z-10" />
+                  <Check className="h-16 w-16 text-[#00ff00] mx-auto" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
+                  <div className="absolute inset-0 blur-lg bg-[#00ff00]/30 -z-10" />
                 </div>
                 <h2 className="text-2xl font-bold">Puzzle Solved!</h2>
                 <p className="text-muted-foreground">
                   Completed in {formatTime(time)} with {moves} moves
                 </p>
-                <div className="text-3xl font-bold text-primary neon-text">
+                <div className="text-3xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>
                   Score: {currentScore.toLocaleString()}
                 </div>
                 <div className="flex gap-3 pt-4">

@@ -10,14 +10,14 @@ import { ArrowLeft, RotateCcw, Trophy, Clock, Zap, Brain } from "lucide-react"
 
 const SYMBOLS = ["A", "B", "C", "D", "E", "F", "G", "H"]
 const COLORS = [
-  "from-primary to-accent",
-  "from-accent to-neon-cyan",
-  "from-neon-cyan to-primary",
-  "from-chart-4 to-accent",
-  "from-success to-neon-cyan",
-  "from-primary to-chart-4",
-  "from-accent to-success",
-  "from-neon-cyan to-chart-4",
+  "from-[#00ff00] to-[#ff00ff]",
+  "from-[#ff00ff] to-[#0088ff]",
+  "from-[#0088ff] to-[#00ff00]",
+  "from-[#00ff00] to-[#0088ff]",
+  "from-[#ff00ff] to-[#00ff00]",
+  "from-[#0088ff] to-[#ff00ff]",
+  "from-[#00ff00] to-[#ff0055]",
+  "from-[#ff0055] to-[#0088ff]",
 ]
 
 interface CardType {
@@ -173,8 +173,8 @@ export default function MemoryGame() {
   return (
     <div className="min-h-screen bg-background">
       {/* Background */}
-      <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background -z-10" />
-      <div className="fixed top-20 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#00ff00]/5 via-background to-background -z-10" />
+      <div className="fixed top-20 left-1/4 w-96 h-96 bg-[#ff00ff]/10 rounded-full blur-3xl -z-10" />
 
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -188,8 +188,8 @@ export default function MemoryGame() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-primary" />
-            <span className="font-bold text-lg">Neon Memory</span>
+            <Brain className="h-5 w-5 text-[#ff00ff]" style={{ filter: 'drop-shadow(0 0 5px #ff00ff)' }} />
+            <span className="font-bold text-lg text-[#ff00ff]" style={{ textShadow: '0 0 5px #ff00ff' }}>Neon Memory</span>
           </div>
 
           <Button variant="ghost" size="sm" onClick={resetGame} className="gap-2">
@@ -203,16 +203,16 @@ export default function MemoryGame() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-wrap items-center justify-center gap-4">
           <Badge variant="outline" className="bg-secondary/50 gap-2 px-3 py-1.5">
-            <Clock className="h-3.5 w-3.5 text-primary" />
-            {formatTime(time)}
+            <Clock className="h-3.5 w-3.5 text-[#00ff00]" style={{ filter: 'drop-shadow(0 0 5px #00ff00)' }} />
+            <span className="text-[#00ff00]">{formatTime(time)}</span>
           </Badge>
           <Badge variant="outline" className="bg-secondary/50 gap-2 px-3 py-1.5">
-            <Zap className="h-3.5 w-3.5 text-chart-4" />
-            {moves} moves
+            <Zap className="h-3.5 w-3.5 text-[#ff00ff]" style={{ filter: 'drop-shadow(0 0 5px #ff00ff)' }} />
+            <span className="text-[#ff00ff]">{moves} moves</span>
           </Badge>
           <Badge variant="outline" className="bg-secondary/50 gap-2 px-3 py-1.5">
-            <Trophy className="h-3.5 w-3.5 text-accent" />
-            {matches}/8 matched
+            <Trophy className="h-3.5 w-3.5 text-[#0088ff]" style={{ filter: 'drop-shadow(0 0 5px #0088ff)' }} />
+            <span className="text-[#0088ff]">{matches}/8 matched</span>
           </Badge>
           {highScore && (
             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 gap-2 px-3 py-1.5">
@@ -266,14 +266,14 @@ export default function MemoryGame() {
             <Card className="w-full max-w-sm border-primary/50 bg-card">
               <CardContent className="p-6 text-center space-y-4">
                 <div className="relative inline-block">
-                  <Trophy className="h-16 w-16 text-chart-4 mx-auto" />
-                  <div className="absolute inset-0 blur-lg bg-chart-4/30 -z-10" />
+                  <Trophy className="h-16 w-16 text-[#00ff00] mx-auto" style={{ filter: 'drop-shadow(0 0 10px #00ff00)' }} />
+                  <div className="absolute inset-0 blur-lg bg-[#00ff00]/30 -z-10" />
                 </div>
                 <h2 className="text-2xl font-bold">Congratulations!</h2>
                 <p className="text-muted-foreground">
                   You completed the game in {formatTime(time)} with {moves} moves
                 </p>
-                <div className="text-3xl font-bold text-primary neon-text">
+                <div className="text-3xl font-bold text-[#00ff00]" style={{ textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00' }}>
                   Score: {currentScore.toLocaleString()}
                 </div>
                 <div className="flex gap-3 pt-4">
