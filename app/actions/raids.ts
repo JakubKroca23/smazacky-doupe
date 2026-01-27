@@ -25,38 +25,28 @@ export async function saveRaidCompletion({
     return { error: 'Not authenticated' }
   }
 
-  // Get current raid stats
-  const { data: currentStats } = await supabase
-    .from('raid_stats')
-    .select('*')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  console.log('[v0] Saving raid completion:', { raidType, success, timeSeconds, xpEarned, currencyEarned })
 
-  const newStats = {
-    user_id: user.id,
-    total_completed: (currentStats?.total_completed || 0) + 1,
-    total_success: (currentStats?.total_success || 0) + (success ? 1 : 0),
-    total_failed: (currentStats?.total_failed || 0) + (success ? 0 : 1),
-    best_time_seconds: 
-      !currentStats?.best_time_seconds || timeSeconds < currentStats.best_time_seconds
-        ? timeSeconds
-        : currentStats.best_time_seconds,
-    total_xp_earned: (currentStats?.total_xp_earned || 0) + xpEarned,
-    total_currency_earned: (currentStats?.total_currency_earned || 0) + currencyEarned,
-    items_earned: [...(currentStats?.items_earned || []), ...itemsEarned],
-    updated_at: new Date().toISOString(),
+  // Insert new raid completion record
+  const { error: raidError } = await supabase
+    .from('raid_stats')
+    .insert({
+      user_id: user.id,
+      raid_id: raidType.toLowerCase().replace(/\s+/g, '_'),
+      raid_name: raidType,
+      success,
+      completion_time: timeSeconds,
+      xp_earned: xpEarned,
+      currency_earned: currencyEarned,
+      items_earned: itemsEarned,
+    })
+
+  if (raidError) {
+    console.error('[v0] Error saving raid completion:', raidError)
+    return { error: raidError.message }
   }
 
-  const { error } = await supabase
-    .from('raid_stats')
-    .upsert(newStats, { onConflict: 'user_id' })
-
-  if (error) {
-    console.error('[v0] Error saving raid stats:', error)
-    return { error: error.message }
-  }
-
-  // Also update player stats with XP and currency
+  // Update player stats with XP and currency
   const { data: playerStats } = await supabase
     .from('player_stats')
     .select('*')
@@ -64,17 +54,40 @@ export async function saveRaidCompletion({
     .maybeSingle()
 
   if (playerStats) {
-    await supabase
+    const { error: updateError } = await supabase
       .from('player_stats')
       .update({
         xp: (playerStats.xp || 0) + xpEarned,
         currency: (playerStats.currency || 0) + currencyEarned,
       })
       .eq('user_id', user.id)
+
+    if (updateError) {
+      console.error('[v0] Error updating player stats:', updateError)
+    }
+  } else {
+    // Create player_stats if it doesn't exist
+    const { error: createError } = await supabase
+      .from('player_stats')
+      .insert({
+        user_id: user.id,
+        level: 1,
+        xp: xpEarned,
+        currency: currencyEarned,
+        health: 100,
+        stamina: 100,
+        luck: 10,
+        smaze: 2000,
+      })
+
+    if (createError) {
+      console.error('[v0] Error creating player stats:', createError)
+    }
   }
 
   revalidatePath('/profile')
   revalidatePath('/raids')
   
+  console.log('[v0] Raid completion saved successfully')
   return { success: true }
 }
