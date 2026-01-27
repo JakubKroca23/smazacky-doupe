@@ -42,7 +42,7 @@ interface RoomData {
 }
 
 export default function KostkyPage() {
-  const [myData, setMyData] = useState({ name: '', room: '', id: Math.random().toString(36).substr(2, 9), isHost: false })
+  const [myData, setMyData] = useState({ name: '', room: '', id: '', isHost: false })
   const [screen, setScreen] = useState<'setup' | 'lobby' | 'game' | 'stats'>('setup')
   const [roomData, setRoomData] = useState<RoomData | null>(null)
   const [playerName, setPlayerName] = useState('')
@@ -53,10 +53,47 @@ export default function KostkyPage() {
   const [lastEmojiSync, setLastEmojiSync] = useState(0)
   const [dicePhysics, setDicePhysics] = useState<{x: number, y: number, vx: number, vy: number, r: number, vr: number}[]>([])
   const [msgBox, setMsgBox] = useState('')
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [inviteLink, setInviteLink] = useState('')
+  const [linkCopied, setLinkCopied] = useState(false)
   const animFrameRef = useRef<number | null>(null)
   const channelRef = useRef<RealtimeChannel | null>(null)
   
   const supabase = createClient()
+
+  // Check auth and URL params on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        setUser({ id: authUser.id, email: authUser.email || '' })
+        setPlayerName(authUser.email?.split('@')[0] || 'Hrac')
+      }
+      setIsLoading(false)
+    }
+    checkAuth()
+
+    // Check URL for room parameter
+    const urlParams = new URLSearchParams(window.location.search)
+    const roomParam = urlParams.get('room')
+    if (roomParam) {
+      setGameId(roomParam)
+    }
+  }, [supabase.auth])
+
+  // Generate room code
+  const generateRoomCode = () => {
+    return Math.random().toString(36).substring(2, 8).toUpperCase()
+  }
+
+  // Copy invite link
+  const copyInviteLink = () => {
+    navigator.clipboard.writeText(inviteLink)
+    setLinkCopied(true)
+    showMsg("Odkaz zkopirovan!")
+    setTimeout(() => setLinkCopied(false), 2000)
+  }
 
   // Show message box
   const showMsg = (t: string) => {
@@ -239,12 +276,25 @@ export default function KostkyPage() {
   }
 
   const connect = async (type: 'create' | 'join') => {
-    if (!playerName.trim() || !gameId.trim()) return
+    if (!user) {
+      showMsg("Musis byt prihlasen!")
+      return
+    }
+    if (!playerName.trim()) {
+      showMsg("Zadej prezdivku!")
+      return
+    }
+    
+    const roomCode = type === 'create' ? generateRoomCode() : gameId.toUpperCase()
+    if (!roomCode.trim()) {
+      showMsg("Zadej kod mistnosti!")
+      return
+    }
     
     const newMyData = {
       name: playerName,
-      room: gameId,
-      id: Math.random().toString(36).substr(2, 9),
+      room: roomCode,
+      id: user.id,
       isHost: type === 'create'
     }
     setMyData(newMyData)
@@ -272,27 +322,43 @@ export default function KostkyPage() {
 
       await supabase
         .from('kostky_rooms')
-        .upsert({ id: gameId, room_data: initialState, host_id: newMyData.id })
+        .upsert({ id: roomCode, room_data: initialState, host_id: newMyData.id })
       
       setRoomData(initialState)
+      
+      // Generate invite link
+      const link = `${window.location.origin}${window.location.pathname}?room=${roomCode}`
+      setInviteLink(link)
     } else {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('kostky_rooms')
         .select('room_data')
-        .eq('id', gameId)
+        .eq('id', roomCode)
         .single()
 
-      if (data) {
-        const currentData = data.room_data as RoomData
-        currentData.players[newMyData.id] = { id: newMyData.id, name: playerName, score: 0, strikes: 0, gramy: 0, smazanoCount: 0 }
-        
-        await supabase
-          .from('kostky_rooms')
-          .update({ room_data: currentData })
-          .eq('id', gameId)
-        
-        setRoomData(currentData)
+      if (error || !data) {
+        showMsg("Mistnost neexistuje!")
+        return
       }
+
+      const currentData = data.room_data as RoomData
+      if (currentData.status !== 'lobby') {
+        showMsg("Hra jiz zacala!")
+        return
+      }
+      
+      currentData.players[newMyData.id] = { id: newMyData.id, name: playerName, score: 0, strikes: 0, gramy: 0, smazanoCount: 0 }
+      
+      await supabase
+        .from('kostky_rooms')
+        .update({ room_data: currentData })
+        .eq('id', roomCode)
+      
+      setRoomData(currentData)
+      
+      // Set invite link for joined player too
+      const link = `${window.location.origin}${window.location.pathname}?room=${roomCode}`
+      setInviteLink(link)
     }
     
     setScreen('lobby')
@@ -628,38 +694,96 @@ export default function KostkyPage() {
       {/* SETUP SCREEN */}
       {screen === 'setup' && (
         <section className="screen active">
-          <h1>KOSTKY PRO SMAŽKY 💉</h1>
-          <div className="stack">
-            <input
-              type="text"
-              placeholder="Přezdívka"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="ID Místnosti"
-              value={gameId}
-              onChange={(e) => setGameId(e.target.value)}
-            />
-            <button onClick={() => connect('create')}>VYTVOŘIT ZÁVISLOST ✨</button>
-            <button onClick={() => connect('join')}>PŘIPOJIT SE 🔌</button>
-          </div>
+          <h1>KOSTKY PRO SMAŽKY</h1>
+          
+          {isLoading ? (
+            <p style={{ color: 'var(--neon-blue)' }}>Nacitam...</p>
+          ) : !user ? (
+            <div className="stack">
+              <p style={{ color: 'var(--neon-pink)', marginBottom: '20px' }}>Pro hrani musis byt prihlasen</p>
+              <a href="/auth/login" style={{ textDecoration: 'none' }}>
+                <button style={{ width: '100%' }}>PRIHLASIT SE</button>
+              </a>
+              <a href="/auth/sign-up" style={{ textDecoration: 'none' }}>
+                <button style={{ width: '100%', borderColor: 'var(--neon-blue)', color: 'var(--neon-blue)' }}>REGISTRACE</button>
+              </a>
+            </div>
+          ) : (
+            <div className="stack">
+              <p style={{ color: 'var(--neon-green)', marginBottom: '10px' }}>Prihlasen jako: {user.email}</p>
+              <input
+                type="text"
+                placeholder="Prezdivka"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+              />
+              
+              <button onClick={() => connect('create')} style={{ borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}>
+                VYTVORIT MISTNOST
+              </button>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '10px 0' }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--neon-pink)' }} />
+                <span style={{ color: 'var(--neon-pink)', fontSize: '0.8rem' }}>NEBO</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--neon-pink)' }} />
+              </div>
+              
+              <input
+                type="text"
+                placeholder="Kod mistnosti (napr. ABC123)"
+                value={gameId}
+                onChange={(e) => setGameId(e.target.value.toUpperCase())}
+                style={{ textTransform: 'uppercase' }}
+              />
+              <button onClick={() => connect('join')} style={{ borderColor: 'var(--neon-blue)', color: 'var(--neon-blue)' }}>
+                PRIPOJIT SE
+              </button>
+            </div>
+          )}
         </section>
       )}
 
       {/* LOBBY SCREEN */}
       {screen === 'lobby' && (
         <section className="screen active">
-          <h1>LOBBY 🏠</h1>
-          <p>Místnost: <span style={{ color: 'var(--neon-blue)' }}>{myData.room}</span></p>
+          <h1>LOBBY</h1>
+          
+          {/* Room code and invite link */}
+          <div style={{ background: 'rgba(0,255,255,0.1)', border: '2px solid var(--neon-blue)', borderRadius: '12px', padding: '15px', marginBottom: '15px' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--neon-pink)', marginBottom: '5px' }}>KOD MISTNOSTI:</p>
+            <p style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--neon-green)', letterSpacing: '5px', textShadow: '0 0 10px var(--neon-green)' }}>{myData.room}</p>
+            
+            {inviteLink && (
+              <div style={{ marginTop: '10px' }}>
+                <p style={{ fontSize: '0.7rem', color: '#888', marginBottom: '5px' }}>Posli odkaz kamaradum:</p>
+                <div style={{ display: 'flex', gap: '5px' }}>
+                  <input
+                    type="text"
+                    value={inviteLink}
+                    readOnly
+                    style={{ flex: 1, fontSize: '0.7rem', padding: '8px', background: 'rgba(0,0,0,0.5)' }}
+                  />
+                  <button
+                    onClick={copyInviteLink}
+                    style={{ padding: '8px 15px', fontSize: '0.8rem', borderColor: linkCopied ? 'var(--neon-green)' : 'var(--neon-pink)', color: linkCopied ? 'var(--neon-green)' : 'var(--neon-pink)' }}
+                  >
+                    {linkCopied ? 'OK!' : 'KOPIROVAT'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           
           <div style={{ margin: '15px 0' }}>
-            <p style={{ fontSize: '0.9rem', color: 'var(--neon-pink)', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 'bold' }}>smažky čekající na čáru:</p>
+            <p style={{ fontSize: '0.9rem', color: 'var(--neon-pink)', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 'bold' }}>Hraci ({playersArray.length}):</p>
             <div style={{ maxHeight: '100px', overflowY: 'auto' }}>
               <ul id="lobby-players-ul" style={{ listStyle: 'none', fontSize: '1rem', color: 'var(--neon-green)' }}>
                 {playersArray.map(p => (
-                  <li key={p.id}>💀 {p.name} <span style={{ fontSize: '0.7rem', color: 'var(--neon-blue)' }}>[{p.gramy || 0}g matra]</span></li>
+                  <li key={p.id}>
+                    {p.id === myData.id ? '👤' : '💀'} {p.name} 
+                    {roomData && Object.keys(roomData.players)[0] === p.id && <span style={{ color: 'var(--neon-pink)', marginLeft: '5px' }}>(HOST)</span>}
+                    <span style={{ fontSize: '0.7rem', color: 'var(--neon-blue)', marginLeft: '5px' }}>[{p.gramy || 0}g]</span>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -675,7 +799,7 @@ export default function KostkyPage() {
               <input
                 type="text"
                 id="chat-input"
-                placeholder="Napiš něco do placu..."
+                placeholder="Napsat zpravu..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyPress={(e) => { if (e.key === 'Enter') sendChatMessage() }}
@@ -684,10 +808,14 @@ export default function KostkyPage() {
             </div>
           </div>
 
-          {myData.isHost && playersArray.length > 0 && (
-            <button id="btn-start" style={{ width: '100%', marginTop: '15px' }} onClick={startGame}>
-              ROZDAT FRČKA 🔥
+          {myData.isHost && playersArray.length >= 1 && (
+            <button id="btn-start" style={{ width: '100%', marginTop: '15px', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }} onClick={startGame}>
+              ZACIT HRU ({playersArray.length} {playersArray.length === 1 ? 'hrac' : playersArray.length < 5 ? 'hraci' : 'hracu'})
             </button>
+          )}
+          
+          {!myData.isHost && (
+            <p style={{ color: '#888', fontSize: '0.8rem', marginTop: '15px' }}>Cekam az host spusti hru...</p>
           )}
         </section>
       )}
